@@ -1,0 +1,129 @@
+{
+  "anchors": [
+    {
+      "icon": "code",
+      "name": "API Reference",
+      "url": "/api-reference"
+    },
+    {
+      "icon": "book",
+      "name": "Guides",
+      "url": "/guides"
+    }
+  ],
+  "api": {
+    "baseUrl": "http://localhost:3000",
+    "paramFields": {
+      "expanded": "topLevel"
+    },
+    "playground": {
+      "disableProxy": true
+    }
+  },
+  "codeBlock": {
+    "mode": "auto"
+  },
+  "colors": {
+    "dark": "#0D9373",
+    "light": "#07C983",
+    "primary": "#0D9373"
+  },
+  "favicon": "/assets/favicon.png",
+  "footerSocials": {
+    "github": "https://github.com/your-repo"
+  },
+  "logo": {
+    "dark": "/assets/favicon.png",
+    "light": "/assets/favicon.png"
+  },
+  "modeToggle": {
+    "default": "dark"
+  },
+  "name": "SD2 Manual Order Desk Documentation",
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": ["/introduction", "/quickstart", "/authentication"]
+    },
+    {
+      "group": "Orders",
+      "pages": [
+        "/api-reference/orders/list-orders",
+        "/api-reference/orders/create-order",
+        "/api-reference/orders/get-order",
+        "/api-reference/orders/confirm-order",
+        "/api-reference/orders/request-payment-identifiers"
+      ]
+    },
+    {
+      "group": "Recipients",
+      "pages": [
+        "/api-reference/recipients/list-recipients",
+        "/api-reference/recipients/create-recipient",
+        "/api-reference/recipients/get-recipient",
+        "/api-reference/recipients/update-recipient",
+        "/api-reference/recipients/delete-recipient"
+      ]
+    },
+    {
+      "group": "Schemas",
+      "pages": [
+        "/api-reference/schemas/user",
+        "/api-reference/schemas/order",
+        {
+          "group": "Recipient",
+          "icon": "user-group",
+          "pages": [
+            "/api-reference/schemas/recipient/crypto",
+            {
+              "group": "Fiat",
+              "icon": "money-bill",
+              "pages": [
+                "/api-reference/schemas/recipient/fiat/domestic",
+                "/api-reference/schemas/recipient/fiat/international"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "/guides/workflow",
+        "/guides/recipients",
+        {
+          "group": "Orders",
+          "pages": [
+            "/guides/orders",
+            "/guides/orders/confirmation",
+            "/guides/orders/payment-identifiers"
+          ]
+        },
+        "/guides/monitoring",
+        "/guides/security",
+        "/guides/api-keys",
+        "/guides/error-handling",
+        "/guides/validation"
+      ]
+    },
+    {
+      "group": "Support",
+      "pages": ["/support"]
+    }
+  ],
+  "topAnchor": {
+    "icon": "book-open",
+    "name": "Documentation"
+  },
+  "topbarCtaButton": {
+    "name": "Get Started",
+    "url": "https://github.com/your-repo"
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@example.com"
+    }
+  ]
+}

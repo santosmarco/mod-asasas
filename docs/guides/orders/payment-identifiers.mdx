@@ -1,0 +1,423 @@
+---
+title: 'Requesting Payment Identifiers'
+description: 'Learn how to work with IMAD/OMAD payment identifiers'
+---
+
+This guide explains how to work with IMAD (Input Message Accountability Data) and OMAD (Output Message Accountability Data) identifiers for tracking wire transfers.
+
+## Understanding Payment Identifiers
+
+<CardGroup cols={2}>
+  <Card title="IMAD" icon="arrow-right-to-bracket">
+    Input Message Accountability Data - Unique identifier for incoming wire
+    transfers
+  </Card>
+  <Card title="OMAD" icon="arrow-right-from-bracket">
+    Output Message Accountability Data - Unique identifier for outgoing wire
+    transfers
+  </Card>
+</CardGroup>
+
+## Requesting Payment Identifiers
+
+When a fiat order is created, you can request its payment identifiers:
+
+<CodeGroup>
+
+```typescript TypeScript
+async function requestPaymentIdentifiers(orderId: string) {
+  const response = await fetch(
+    `http://localhost:3000/api/orders/${orderId}/payment_identifiers`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.API_KEY,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  const { data: identifiers } = await response.json()
+  return identifiers
+}
+
+// Example usage
+const orderId = 'ord_123'
+const identifiers = await requestPaymentIdentifiers(orderId)
+
+if (identifiers.imad && identifiers.omad) {
+  console.log('Payment identifiers:', {
+    imad: identifiers.imad,
+    omad: identifiers.omad,
+  })
+} else {
+  console.log('Payment identifiers not yet available')
+  if (identifiers.notes) {
+    console.log('Notes:', identifiers.notes)
+  }
+}
+```
+
+```python Python
+import requests
+import os
+from typing import TypedDict, Optional
+
+class PaymentIdentifiers(TypedDict):
+    imad: Optional[str]
+    omad: Optional[str]
+    notes: Optional[str]
+
+def request_payment_identifiers(order_id: str) -> PaymentIdentifiers:
+    response = requests.put(
+        f'http://localhost:3000/api/orders/{order_id}/payment_identifiers',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        }
+    )
+
+    response.raise_for_status()
+    return response.json()['data']
+
+# Example usage
+order_id = 'ord_123'
+identifiers = request_payment_identifiers(order_id)
+
+if identifiers.get('imad') and identifiers.get('omad'):
+    print('Payment identifiers:', {
+        'imad': identifiers['imad'],
+        'omad': identifiers['omad']
+    })
+else:
+    print('Payment identifiers not yet available')
+    if identifiers.get('notes'):
+        print('Notes:', identifiers['notes'])
+```
+
+</CodeGroup>
+
+## Polling for Identifiers
+
+Since payment identifiers might not be available immediately, implement polling:
+
+<CodeGroup>
+
+```typescript TypeScript
+async function pollPaymentIdentifiers(
+  orderId: string,
+  maxAttempts = 10,
+  interval = 5000,
+): Promise<{ imad: string; omad: string }> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const identifiers = await requestPaymentIdentifiers(orderId)
+
+    if (identifiers.imad && identifiers.omad) {
+      return {
+        imad: identifiers.imad,
+        omad: identifiers.omad,
+      }
+    }
+
+    if (attempt === maxAttempts) {
+      throw new Error(
+        'Payment identifiers not available after maximum attempts',
+      )
+    }
+
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+
+  throw new Error('Should not reach here')
+}
+
+// Example usage
+try {
+  const identifiers = await pollPaymentIdentifiers('ord_123')
+  console.log('Payment identifiers received:', identifiers)
+} catch (error) {
+  console.error('Failed to get payment identifiers:', error)
+}
+```
+
+```python Python
+import time
+from typing import TypedDict
+
+class PaymentIdentifiersComplete(TypedDict):
+    imad: str
+    omad: str
+
+def poll_payment_identifiers(
+    order_id: str,
+    max_attempts: int = 10,
+    interval: float = 5.0
+) -> PaymentIdentifiersComplete:
+    for attempt in range(1, max_attempts + 1):
+        identifiers = request_payment_identifiers(order_id)
+
+        if identifiers.get('imad') and identifiers.get('omad'):
+            return {
+                'imad': identifiers['imad'],
+                'omad': identifiers['omad']
+            }
+
+        if attempt == max_attempts:
+            raise Exception(
+                'Payment identifiers not available after maximum attempts'
+            )
+
+        time.sleep(interval)
+
+    raise Exception('Should not reach here')
+
+# Example usage
+try:
+    identifiers = poll_payment_identifiers('ord_123')
+    print('Payment identifiers received:', identifiers)
+except Exception as error:
+    print('Failed to get payment identifiers:', error)
+```
+
+</CodeGroup>
+
+## Identifier Formats
+
+### IMAD Format
+
+- 16-character string
+- Example: `MMQFMP8C001002921`
+- Format: `YYYYBBBBNNNNNNN`
+  - `YYYY`: Year code
+  - `BBBB`: Bank code
+  - `NNNNNNN`: Sequence number
+
+### OMAD Format
+
+- 16-character string
+- Example: `O0C20JR81C000693`
+- Format: `YYYYBBBBNNNNNNN`
+  - `YYYY`: Year code
+  - `BBBB`: Bank code
+  - `NNNNNNN`: Sequence number
+
+## Best Practices
+
+### 1. Implement Retry Logic
+
+<CodeGroup>
+
+```typescript TypeScript
+async function requestPaymentIdentifiersWithRetry(
+  orderId: string,
+  maxRetries = 3,
+): Promise<PaymentIdentifiers> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/orders/${orderId}/payment_identifiers`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.API_KEY,
+          },
+        },
+      )
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error.message)
+      }
+
+      return response.json()
+    } catch (error) {
+      lastError = error as Error
+      if (attempt === maxRetries) break
+
+      // Exponential backoff
+      await new Promise(resolve =>
+        setTimeout(resolve, Math.pow(2, attempt) * 1000),
+      )
+    }
+  }
+
+  throw new Error(
+    `Failed to request payment identifiers after ${maxRetries} attempts: ${lastError?.message}`,
+  )
+}
+```
+
+```python Python
+def request_payment_identifiers_with_retry(
+    order_id: str,
+    max_retries: int = 3
+) -> PaymentIdentifiers:
+    last_error = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.put(
+                f'http://localhost:3000/api/orders/{order_id}/payment_identifiers',
+                headers={
+                    'Content-Type': 'application/json',
+                    'x-api-key': os.getenv('API_KEY')
+                }
+            )
+            response.raise_for_status()
+            return response.json()['data']
+        except Exception as error:
+            last_error = error
+            if attempt == max_retries:
+                break
+
+            # Exponential backoff
+            time.sleep(2 ** attempt)
+
+    raise Exception(
+        f"Failed to request payment identifiers after {max_retries} attempts: {str(last_error)}"
+    )
+```
+
+</CodeGroup>
+
+### 2. Error Handling
+
+<CodeGroup>
+
+```typescript TypeScript
+interface ErrorLog {
+  timestamp: string
+  error: string
+  orderId: string
+  context: Record<string, any>
+}
+
+async function logError(error: Error, context: Record<string, any>) {
+  const errorLog: ErrorLog = {
+    timestamp: new Date().toISOString(),
+    error: error.message,
+    orderId: context.orderId,
+    context,
+  }
+
+  console.error('Payment identifier error:', errorLog)
+}
+
+// Example usage
+try {
+  const identifiers = await requestPaymentIdentifiers('ord_123')
+} catch (error) {
+  await logError(error as Error, {
+    orderId: 'ord_123',
+    operation: 'request_identifiers',
+  })
+}
+```
+
+```python Python
+from datetime import datetime
+from typing import Dict, Any
+
+class ErrorLog(TypedDict):
+    timestamp: str
+    error: str
+    order_id: str
+    context: Dict[str, Any]
+
+def log_error(error: Exception, context: Dict[str, Any]):
+    error_log: ErrorLog = {
+        'timestamp': datetime.now().isoformat(),
+        'error': str(error),
+        'order_id': context['order_id'],
+        'context': context
+    }
+
+    print('Payment identifier error:', error_log)
+
+# Example usage
+try:
+    identifiers = request_payment_identifiers('ord_123')
+except Exception as error:
+    log_error(error, {
+        'order_id': 'ord_123',
+        'operation': 'request_identifiers'
+    })
+```
+
+</CodeGroup>
+
+### 3. Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+function isValidImad(imad: string): boolean {
+  return /^[A-Z0-9]{16}$/.test(imad)
+}
+
+function isValidOmad(omad: string): boolean {
+  return /^[A-Z0-9]{16}$/.test(omad)
+}
+
+// Example usage
+const identifiers = await requestPaymentIdentifiers('ord_123')
+
+if (identifiers.imad && !isValidImad(identifiers.imad)) {
+  throw new Error('Invalid IMAD format')
+}
+
+if (identifiers.omad && !isValidOmad(identifiers.omad)) {
+  throw new Error('Invalid OMAD format')
+}
+```
+
+```python Python
+import re
+
+def is_valid_imad(imad: str) -> bool:
+    return bool(re.match(r'^[A-Z0-9]{16}$', imad))
+
+def is_valid_omad(omad: str) -> bool:
+    return bool(re.match(r'^[A-Z0-9]{16}$', omad))
+
+# Example usage
+identifiers = request_payment_identifiers('ord_123')
+
+if identifiers.get('imad') and not is_valid_imad(identifiers['imad']):
+    raise ValueError('Invalid IMAD format')
+
+if identifiers.get('omad') and not is_valid_omad(identifiers['omad']):
+    raise ValueError('Invalid OMAD format')
+```
+
+</CodeGroup>
+
+## Rate Limits
+
+- 50 payment identifier requests per hour per order
+- 1000 total requests per hour per API key
+
+<Note>Contact support to request increased rate limits for your account.</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Order Monitoring" icon="chart-line" href="/guides/monitoring">
+    Learn how to monitor your orders effectively.
+  </Card>
+  <Card title="Error Handling" icon="bug" href="/guides/error-handling">
+    Implement robust error handling.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with payment identifier issues
+</Card>

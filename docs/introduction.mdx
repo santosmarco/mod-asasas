@@ -1,0 +1,146 @@
+---
+title: 'Introduction'
+description: 'Welcome to the SD2 Mod API documentation'
+---
+
+# Welcome to SD2 Mod API
+
+SD2 Mod API enables seamless transactions between fiat currencies and cryptocurrencies. Our API provides a robust platform for managing payments, recipients, and orders with enterprise-grade security and reliability.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Fiat & Crypto Support" icon="money-bill-transfer">
+    Process payments in multiple fiat currencies (USD, BRL, MXN) and
+    cryptocurrencies (USDC, USDT) across different networks.
+  </Card>
+  <Card title="Recipient Management" icon="users">
+    Create and manage recipients for both fiat and crypto payments with
+    comprehensive validation and security checks.
+  </Card>
+  <Card title="Order Processing" icon="file-invoice-dollar">
+    Create, confirm, and track payment orders with real-time status updates and
+    detailed transaction history.
+  </Card>
+  <Card title="Payment Identifiers" icon="receipt">
+    Track wire transfers with IMAD/OMAD identifiers for complete payment
+    visibility.
+  </Card>
+</CardGroup>
+
+## Supported Currencies
+
+### Fiat Currencies
+
+- `USD`: United States Dollar
+- `BRL`: Brazilian Real
+- `MXN`: Mexican Peso
+
+### Cryptocurrencies
+
+- `USDC_ETH`: USDC on Ethereum network
+- `USDT_ETH`: USDT on Ethereum network
+- `USDT_TRX`: USDT on Tron network
+
+## Getting Started
+
+<Steps>
+  <Step title="Authentication">
+    Get your API key and learn about [authentication](/authentication).
+  </Step>
+  <Step title="Create Recipients">
+    Set up [recipients](/guides/recipients) for payments.
+  </Step>
+  <Step title="Process Orders">
+    Create and manage [orders](/guides/orders).
+  </Step>
+  <Step title="Monitor Transactions">
+    Track orders and payments with our [monitoring tools](/guides/monitoring).
+  </Step>
+</Steps>
+
+## API Overview
+
+Our RESTful API uses standard HTTP methods and returns JSON responses. Here's a quick example:
+
+```bash
+# Create a new order
+curl -X POST "http://localhost:3000/api/orders" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your_api_key_here" \
+  -d '{
+    "from": {
+      "currency": "USD",
+      "amount": 1000
+    },
+    "to": {
+      "currency": "USDC_ETH",
+      "recipient_id": 123
+    },
+    "is_third_party": false
+  }'
+```
+
+## Security
+
+<Card
+  horizontal
+  title="Security Best Practices"
+  icon="shield-check"
+  href="/guides/security"
+>
+  Our API implements multiple security measures: - API key authentication -
+  HTTPS encryption - Input validation - Rate limiting
+</Card>
+
+## Comprehensive Guides
+
+<CardGroup cols={2}>
+  <Card
+    title="Complete Workflow"
+    icon="diagram-project"
+    href="/guides/workflow"
+  >
+    Learn the end-to-end process of using our API effectively.
+  </Card>
+  <Card title="Recipients Guide" icon="user-group" href="/guides/recipients">
+    Master recipient creation and management.
+  </Card>
+  <Card title="Orders Guide" icon="file-invoice" href="/guides/orders">
+    Understand order creation and processing.
+  </Card>
+  <Card title="Monitoring Guide" icon="chart-line" href="/guides/monitoring">
+    Track and monitor your transactions.
+  </Card>
+</CardGroup>
+
+## Support
+
+<CardGroup cols={2}>
+  <Card title="Documentation" icon="book">
+    Explore our comprehensive [API reference](/api-reference/introduction) and
+    [guides](/guides/workflow).
+  </Card>
+  <Card title="Help & Support" icon="headset">
+    Need help? Our [support team](/support) is available 24/7.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<Steps>
+  <Step title="Read the Quickstart Guide">
+    Follow our [quickstart guide](/quickstart) to get up and running in minutes.
+  </Step>
+  <Step title="Explore the API">
+    Browse the [API reference](/api-reference/introduction) to learn about all
+    available endpoints.
+  </Step>
+  <Step title="Understand Authentication">
+    Learn about [securing your requests](/authentication).
+  </Step>
+  <Step title="Start Building">
+    Create your first [order](/guides/orders) or manage
+    [recipients](/guides/recipients).
+  </Step>
+</Steps>

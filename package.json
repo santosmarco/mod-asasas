@@ -1,0 +1,53 @@
+{
+  "name": "@sd2/mod",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "scripts": {
+    "build": "rm -rf dist && tsc && tsc-alias",
+    "db:generate": "drizzle-kit generate",
+    "db:pull": "drizzle-kit pull",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "schema:generate": "./scripts/generate-schema.sh",
+    "dev": "concurrently -n \"server,docs,openapi\" -c \"blue.bold,green.bold,yellow.bold\" \"ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts\" \"(cd docs && mintlify dev --port 3333)\" \"pnpm run docs:openapi:generate\"",
+    "docs:openapi:generate": "./scripts/generate-openapi.sh",
+    "docs:start": "mintlify dev",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-openapi": "^0.18.0",
+    "@scalar/hono-api-reference": "^0.5.163",
+    "@slack/web-api": "^7.7.0",
+    "drizzle-orm": "^0.37.0",
+    "hono": "^4.6.12",
+    "hono-openapi": "^0.1.5",
+    "lodash": "^4.17.21",
+    "pg": "^8.13.1",
+    "ts-dedent": "^2.2.0",
+    "zod": "^3.23.8",
+    "zod-openapi": "^3.3.0"
+  },
+  "devDependencies": {
+    "@scalar/api-reference-react": "^0.3.152",
+    "@types/lodash": "^4.17.13",
+    "@types/node": "22.10.0",
+    "@vitest/coverage-c8": "^0.33.0",
+    "@vitest/coverage-v8": "2.1.6",
+    "@vitest/ui": "^1.3.1",
+    "concurrently": "^9.1.0",
+    "dotenv": "^16.4.7",
+    "dotenv-cli": "^7.4.4",
+    "drizzle-kit": "^0.29.1",
+    "esbuild-plugin-alias": "^0.2.1",
+    "mintlify": "^4.0.284",
+    "tsc-alias": "^1.8.10",
+    "tsconfig-paths": "^4.2.0",
+    "type-fest": "^4.28.1",
+    "typescript": "^5.7.2",
+    "vite-tsconfig-paths": "^5.1.3",
+    "vitest": "2.0.5",
+    "vitest-mock-extended": "^2.0.2"
+  }
+}

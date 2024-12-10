@@ -1,0 +1,19 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: sd2-mod-api-docs-production
+  namespace: sd2-mod-production
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/sd2-mod-production/docs:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: 'production'
+          resources:
+            limits:
+              cpu: '0.5'
+              memory: '256Mi'

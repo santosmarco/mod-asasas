@@ -1,0 +1,631 @@
+---
+title: 'Monitoring'
+description: 'Learn how to monitor orders and track system status'
+---
+
+This guide explains how to monitor your orders and track their status effectively.
+
+## Order Status Monitoring
+
+<Card horizontal title="Order Statuses" icon="list-check">
+  Orders can have the following statuses: - `pending`: Initial state -
+  `submitted`: Order confirmed - `raised`: Funds detected - `sent`: Transfer
+  initiated - `received`: Transfer completed - `cancelled`: Order cancelled
+</Card>
+
+### Checking Order Status
+
+<CodeGroup>
+
+```typescript TypeScript
+async function getOrderStatus(orderId: string) {
+  const response = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+    headers: {
+      'x-api-key': process.env.API_KEY,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  const { data: order } = await response.json()
+  return order.status
+}
+
+// Check status of a specific order
+const status = await getOrderStatus('ord_123')
+console.log('Order status:', status)
+```
+
+```python Python
+import requests
+import os
+
+def get_order_status(order_id: str) -> str:
+    response = requests.get(
+        f'http://localhost:3000/api/orders/{order_id}',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        }
+    )
+
+    response.raise_for_status()
+    order = response.json()['data']
+    return order['status']
+
+# Check status of a specific order
+try:
+    status = get_order_status('ord_123')
+    print(f'Order status: {status}')
+except requests.exceptions.RequestException as e:
+    print(f'Error checking order status: {e}')
+```
+
+</CodeGroup>
+
+### Listing Orders by Status
+
+<CodeGroup>
+
+```typescript TypeScript
+interface ListOrdersOptions {
+  status?:
+    | 'pending'
+    | 'submitted'
+    | 'raised'
+    | 'sent'
+    | 'received'
+    | 'cancelled'
+  fromCurrency?: string
+  toCurrency?: string
+  isThirdParty?: boolean
+}
+
+async function listOrders(options: ListOrdersOptions = {}) {
+  const params = new URLSearchParams()
+
+  if (options.status) {
+    params.append('status', options.status)
+  }
+  if (options.fromCurrency) {
+    params.append('fromCurrency', options.fromCurrency)
+  }
+  if (options.toCurrency) {
+    params.append('toCurrency', options.toCurrency)
+  }
+  if (options.isThirdParty !== undefined) {
+    params.append('isThirdParty', options.isThirdParty.toString())
+  }
+
+  const response = await fetch(`http://localhost:3000/api/orders?${params}`, {
+    headers: {
+      'x-api-key': process.env.API_KEY,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  return response.json()
+}
+
+// List pending orders
+const { data: pendingOrders } = await listOrders({ status: 'pending' })
+
+// List completed orders
+const { data: completedOrders } = await listOrders({ status: 'received' })
+```
+
+```python Python
+from typing import TypedDict, Optional
+import requests
+import os
+
+class ListOrdersOptions(TypedDict, total=False):
+    status: Optional[str]
+    fromCurrency: Optional[str]
+    toCurrency: Optional[str]
+    isThirdParty: Optional[bool]
+
+def list_orders(options: ListOrdersOptions = None) -> dict:
+    if options is None:
+        options = {}
+
+    params = {k: v for k, v in options.items() if v is not None}
+
+    response = requests.get(
+        'http://localhost:3000/api/orders',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        },
+        params=params
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+# List pending orders
+pending_orders = list_orders({'status': 'pending'})['data']
+
+# List completed orders
+completed_orders = list_orders({'status': 'received'})['data']
+```
+
+</CodeGroup>
+
+## Status Polling
+
+Implement polling to monitor order status changes:
+
+<CodeGroup>
+
+```typescript TypeScript
+async function pollOrderStatus(
+  orderId: string,
+  targetStatus: string,
+  maxAttempts = 10,
+  interval = 5000,
+): Promise<Order> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const { data: order } = await getOrderStatus(orderId)
+
+    if (order.status === targetStatus) {
+      return order
+    }
+
+    if (order.status === 'cancelled') {
+      throw new Error('Order was cancelled')
+    }
+
+    if (attempt === maxAttempts) {
+      throw new Error(`Order did not reach ${targetStatus} status`)
+    }
+
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+
+  throw new Error('Should not reach here')
+}
+
+// Example usage
+try {
+  const order = await pollOrderStatus('ord_123', 'received')
+  console.log('Transfer completed:', order)
+} catch (error) {
+  console.error('Failed to complete transfer:', error)
+}
+```
+
+```python Python
+import time
+from typing import TypedDict, Optional
+
+class Order(TypedDict):
+    id: str
+    status: str
+    # Add other order fields as needed
+
+def poll_order_status(
+    order_id: str,
+    target_status: str,
+    max_attempts: int = 10,
+    interval: float = 5.0
+) -> Order:
+    for attempt in range(1, max_attempts + 1):
+        order = get_order_status(order_id)['data']
+
+        if order['status'] == target_status:
+            return order
+
+        if order['status'] == 'cancelled':
+            raise Exception('Order was cancelled')
+
+        if attempt == max_attempts:
+            raise Exception(f"Order did not reach {target_status} status")
+
+        time.sleep(interval)
+
+    raise Exception('Should not reach here')
+
+# Example usage
+try:
+    order = poll_order_status('ord_123', 'received')
+    print('Transfer completed:', order)
+except Exception as error:
+    print('Failed to complete transfer:', error)
+```
+
+</CodeGroup>
+
+## Payment Identifiers
+
+Monitor IMAD/OMAD payment identifiers for fiat orders:
+
+<CodeGroup>
+
+```typescript TypeScript
+async function checkPaymentIdentifiers(orderId: string) {
+  const response = await fetch(
+    `http://localhost:3000/api/orders/${orderId}/payment_identifiers`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.API_KEY,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  const { data: identifiers } = await response.json()
+  return identifiers
+}
+
+// Example usage
+const identifiers = await checkPaymentIdentifiers('ord_123')
+if (identifiers.imad && identifiers.omad) {
+  console.log('Payment identifiers:', {
+    imad: identifiers.imad,
+    omad: identifiers.omad,
+  })
+} else {
+  console.log('Payment identifiers not yet available')
+}
+```
+
+```python Python
+def check_payment_identifiers(order_id: str):
+    response = requests.put(
+        f'http://localhost:3000/api/orders/{order_id}/payment_identifiers',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        }
+    )
+
+    response.raise_for_status()
+    return response.json()['data']
+
+# Example usage
+identifiers = check_payment_identifiers('ord_123')
+if identifiers.get('imad') and identifiers.get('omad'):
+    print('Payment identifiers:', {
+        'imad': identifiers['imad'],
+        'omad': identifiers['omad']
+    })
+else:
+    print('Payment identifiers not yet available')
+```
+
+</CodeGroup>
+
+## Batch Monitoring
+
+### Getting Daily Summary
+
+<CodeGroup>
+
+```typescript TypeScript
+interface OrderSummary {
+  total_orders: number
+  pending_orders: number
+  completed_orders: number
+  total_volume: {
+    [currency: string]: number
+  }
+}
+
+async function getDailySummary(date: string): Promise<OrderSummary> {
+  const response = await fetch(
+    `http://localhost:3000/api/orders/summary?date=${date}`,
+    {
+      headers: {
+        'x-api-key': process.env.API_KEY,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  return response.json()
+}
+
+// Get today's summary
+const today = new Date().toISOString().split('T')[0]
+const summary = await getDailySummary(today)
+
+console.log('Daily Summary:', {
+  'Total Orders': summary.total_orders,
+  'Pending Orders': summary.pending_orders,
+  'Completed Orders': summary.completed_orders,
+  'Volume by Currency': summary.total_volume,
+})
+```
+
+```python Python
+from typing import TypedDict, Dict
+from datetime import date
+
+class OrderSummary(TypedDict):
+    total_orders: int
+    pending_orders: int
+    completed_orders: int
+    total_volume: Dict[str, float]
+
+def get_daily_summary(date_str: str) -> OrderSummary:
+    response = requests.get(
+        f'http://localhost:3000/api/orders/summary',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        },
+        params={'date': date_str}
+    )
+
+    response.raise_for_status()
+    return response.json()['data']
+
+# Get today's summary
+today = date.today().isoformat()
+summary = get_daily_summary(today)
+
+print('Daily Summary:', {
+    'Total Orders': summary['total_orders'],
+    'Pending Orders': summary['pending_orders'],
+    'Completed Orders': summary['completed_orders'],
+    'Volume by Currency': summary['total_volume']
+})
+```
+
+</CodeGroup>
+
+## Best Practices
+
+### 1. Regular Status Checks
+
+<CodeGroup>
+
+```typescript TypeScript
+async function monitorPendingOrders() {
+  // Check pending orders every 5 minutes
+  setInterval(
+    async () => {
+      try {
+        const { data: pendingOrders } = await listOrders({
+          status: 'pending',
+        })
+
+        for (const order of pendingOrders) {
+          const timePending = Date.now() - new Date(order.created_at).getTime()
+          const hoursPending = timePending / (1000 * 60 * 60)
+
+          if (hoursPending > 24) {
+            console.warn(`Order ${order.id} has been pending for over 24 hours`)
+          }
+        }
+      } catch (error) {
+        console.error('Error monitoring pending orders:', error)
+      }
+    },
+    5 * 60 * 1000,
+  )
+}
+
+// Start monitoring
+monitorPendingOrders()
+```
+
+```python Python
+import time
+from datetime import datetime, timedelta
+
+def monitor_pending_orders():
+    while True:
+        try:
+            pending_orders = list_orders({'status': 'pending'})['data']
+
+            for order in pending_orders:
+                created_at = datetime.fromisoformat(order['created_at'])
+                hours_pending = (datetime.now() - created_at).total_seconds() / 3600
+
+                if hours_pending > 24:
+                    print(f"Order {order['id']} has been pending for over 24 hours")
+
+            # Sleep for 5 minutes
+            time.sleep(300)
+        except Exception as error:
+            print('Error monitoring pending orders:', error)
+            time.sleep(60)  # Wait a minute before retrying
+
+# Start monitoring in a separate thread
+from threading import Thread
+Thread(target=monitor_pending_orders, daemon=True).start()
+```
+
+</CodeGroup>
+
+### 2. Error Handling
+
+<CodeGroup>
+
+```typescript TypeScript
+interface ErrorLog {
+  timestamp: string
+  error: string
+  orderId?: string
+  context: Record<string, any>
+}
+
+async function logError(error: Error, context: Record<string, any>) {
+  const errorLog: ErrorLog = {
+    timestamp: new Date().toISOString(),
+    error: error.message,
+    orderId: context.orderId,
+    context,
+  }
+
+  console.error('Error:', errorLog)
+
+  // Implement your error tracking system here
+  // For example, send to a logging service
+}
+
+// Example usage
+try {
+  const order = await getOrderStatus('ord_123')
+} catch (error) {
+  await logError(error as Error, {
+    orderId: 'ord_123',
+    operation: 'status_check',
+  })
+}
+```
+
+```python Python
+from typing import Dict, Any
+from datetime import datetime
+
+class ErrorLog(TypedDict):
+    timestamp: str
+    error: str
+    order_id: Optional[str]
+    context: Dict[str, Any]
+
+def log_error(error: Exception, context: Dict[str, Any]):
+    error_log: ErrorLog = {
+        'timestamp': datetime.now().isoformat(),
+        'error': str(error),
+        'order_id': context.get('order_id'),
+        'context': context
+    }
+
+    print('Error:', error_log)
+
+    # Implement your error tracking system here
+    # For example, send to a logging service
+
+# Example usage
+try:
+    order = get_order_status('ord_123')
+except Exception as error:
+    log_error(error, {
+        'order_id': 'ord_123',
+        'operation': 'status_check'
+    })
+```
+
+</CodeGroup>
+
+### 3. Automated Reports
+
+<CodeGroup>
+
+```typescript TypeScript
+async function generateDailyReport() {
+  const today = new Date().toISOString().split('T')[0]
+  const summary = await getDailySummary(today)
+
+  const report = {
+    date: today,
+    metrics: {
+      total_orders: summary.total_orders,
+      completion_rate:
+        ((summary.completed_orders / summary.total_orders) * 100).toFixed(2) +
+        '%',
+      volume_by_currency: summary.total_volume,
+    },
+  }
+
+  console.log('Daily Report:', report)
+}
+
+// Run report daily at midnight
+const now = new Date()
+const tomorrow = new Date(now)
+tomorrow.setDate(tomorrow.getDate() + 1)
+tomorrow.setHours(0, 0, 0, 0)
+
+const delay = tomorrow.getTime() - now.getTime()
+setTimeout(() => {
+  generateDailyReport()
+  // Then run every 24 hours
+  setInterval(generateDailyReport, 24 * 60 * 60 * 1000)
+}, delay)
+```
+
+```python Python
+from datetime import datetime, timedelta
+import time
+
+def generate_daily_report():
+    today = datetime.now().date().isoformat()
+    summary = get_daily_summary(today)
+
+    report = {
+        'date': today,
+        'metrics': {
+            'total_orders': summary['total_orders'],
+            'completion_rate': f"{(summary['completed_orders'] / summary['total_orders'] * 100):.2f}%",
+            'volume_by_currency': summary['total_volume']
+        }
+    }
+
+    print('Daily Report:', report)
+
+# Run report daily at midnight
+def schedule_daily_report():
+    while True:
+        now = datetime.now()
+        tomorrow = now.date() + timedelta(days=1)
+        next_run = datetime.combine(tomorrow, datetime.min.time())
+        delay = (next_run - now).total_seconds()
+
+        time.sleep(delay)
+        generate_daily_report()
+
+# Start scheduling in a separate thread
+Thread(target=schedule_daily_report, daemon=True).start()
+```
+
+</CodeGroup>
+
+## Rate Limits
+
+- 1000 status checks per hour
+- 50 payment identifier requests per hour
+- 100 summary requests per hour
+
+<Note>Contact support to request increased rate limits for your account.</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Payment Identifiers"
+    icon="receipt"
+    href="/guides/orders/payment-identifiers"
+  >
+    Learn more about IMAD/OMAD identifiers.
+  </Card>
+  <Card title="Error Handling" icon="bug" href="/guides/error-handling">
+    Implement robust error handling.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with monitoring setup and
+  configuration
+</Card>

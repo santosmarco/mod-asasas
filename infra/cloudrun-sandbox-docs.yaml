@@ -1,0 +1,21 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: sd2-mod-docs-sandbox
+  namespace: sd2-mod-sandbox
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        autoscaling.knative.dev/maxScale: '1'
+    spec:
+      serviceAccountName: cloudrun-compute-sa@sd2-mod-sandbox.iam.gserviceaccount.com
+      containers:
+        - image: gcr.io/sd2-mod-sandbox/docs:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              cpu: '1'
+              memory: '512Mi'

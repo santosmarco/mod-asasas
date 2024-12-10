@@ -1,0 +1,606 @@
+---
+title: 'Orders'
+description: 'Learn how to create and manage payment orders'
+---
+
+Orders represent payment transactions between fiat and cryptocurrency. This guide explains how to create and manage orders effectively.
+
+## Understanding Orders
+
+<CardGroup cols={2}>
+  <Card title="Source (From)" icon="arrow-right-from-bracket">
+    The currency and amount being sent: - Fiat currency (USD, BRL, MXN) -
+    Cryptocurrency (USDC_ETH, USDT_ETH, USDT_TRX)
+  </Card>
+  <Card title="Destination (To)" icon="arrow-right-to-bracket">
+    The currency and recipient receiving the payment: - Recipient ID (created
+    via Recipients API) - Currency to receive
+  </Card>
+</CardGroup>
+
+## Order Types
+
+### 1. Fiat to Crypto (On-Ramp)
+
+Convert traditional currency to cryptocurrency:
+
+- USD → USDC_ETH
+- BRL → USDT_ETH
+- MXN → USDT_TRX
+
+### 2. Crypto to Fiat (Off-Ramp)
+
+Convert cryptocurrency to traditional currency:
+
+- USDC_ETH → USD
+- USDT_ETH → BRL
+- USDT_TRX → MXN
+
+## Creating Orders
+
+<Card
+  horizontal
+  title="Recipients Guide"
+  icon="user-group"
+  href="/guides/recipients"
+>
+  Before creating orders, make sure you have set up your recipients.
+</Card>
+
+### Basic Order Creation
+
+<CodeGroup>
+
+```typescript TypeScript
+interface OrderEndpoint {
+  currency: string
+  amount?: number
+}
+
+interface OrderDestination extends OrderEndpoint {
+  recipient_id: number
+}
+
+interface OrderCreate {
+  from: OrderEndpoint
+  to: OrderDestination
+  is_third_party: boolean
+  purpose_of_payment?: string
+  invoice_file_url?: string
+  sender_legal_name?: string
+  sender_bank_account_last_4?: string
+}
+
+async function createOrder(orderData: OrderCreate) {
+  const response = await fetch('http://localhost:3000/api/orders', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.API_KEY,
+    },
+    body: JSON.stringify(orderData),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  return response.json()
+}
+```
+
+```python Python
+from typing import TypedDict, Optional
+import requests
+import os
+
+class OrderEndpoint(TypedDict):
+    currency: str
+    amount: Optional[float]
+
+class OrderDestination(OrderEndpoint):
+    recipient_id: int
+
+class OrderCreate(TypedDict):
+    from_: OrderEndpoint
+    to: OrderDestination
+    is_third_party: bool
+    purpose_of_payment: Optional[str]
+    invoice_file_url: Optional[str]
+    sender_legal_name: Optional[str]
+    sender_bank_account_last_4: Optional[str]
+
+def create_order(order_data: OrderCreate):
+    response = requests.post(
+        'http://localhost:3000/api/orders',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        },
+        json=order_data
+    )
+
+    response.raise_for_status()
+    return response.json()
+```
+
+</CodeGroup>
+
+### Example: Fiat to Crypto Order
+
+<CodeGroup>
+
+```typescript TypeScript
+const fiatToCryptoOrder = {
+  from: {
+    currency: 'USD',
+    amount: 1000,
+  },
+  to: {
+    currency: 'USDC_ETH',
+    recipient_id: 123,
+  },
+  is_third_party: false,
+}
+
+const { data: order } = await createOrder(fiatToCryptoOrder)
+console.log('Created order:', order.id)
+```
+
+```python Python
+fiat_to_crypto_order = {
+    'from': {
+        'currency': 'USD',
+        'amount': 1000
+    },
+    'to': {
+        'currency': 'USDC_ETH',
+        'recipient_id': 123
+    },
+    'is_third_party': False
+}
+
+response = create_order(fiat_to_crypto_order)
+order = response['data']
+print(f"Created order: {order['id']}")
+```
+
+</CodeGroup>
+
+### Example: Crypto to Fiat Order
+
+<CodeGroup>
+
+```typescript TypeScript
+const cryptoToFiatOrder = {
+  from: {
+    currency: 'USDC_ETH',
+    amount: 1000,
+  },
+  to: {
+    currency: 'USD',
+    recipient_id: 456,
+  },
+  is_third_party: true,
+  purpose_of_payment: 'Consulting services',
+  invoice_file_url: 'https://example.com/invoice.pdf',
+  sender_legal_name: 'John Smith',
+  sender_bank_account_last_4: '1234',
+}
+
+const { data: order } = await createOrder(cryptoToFiatOrder)
+console.log('Created order:', order.id)
+```
+
+```python Python
+crypto_to_fiat_order = {
+    'from': {
+        'currency': 'USDC_ETH',
+        'amount': 1000
+    },
+    'to': {
+        'currency': 'USD',
+        'recipient_id': 456
+    },
+    'is_third_party': True,
+    'purpose_of_payment': 'Consulting services',
+    'invoice_file_url': 'https://example.com/invoice.pdf',
+    'sender_legal_name': 'John Smith',
+    'sender_bank_account_last_4': '1234'
+}
+
+response = create_order(crypto_to_fiat_order)
+order = response['data']
+print(f"Created order: {order['id']}")
+```
+
+</CodeGroup>
+
+## Order Confirmation
+
+<Card
+  horizontal
+  title="Order Confirmation Guide"
+  icon="circle-check"
+  href="/guides/orders/confirmation"
+>
+  Learn more about the order confirmation process.
+</Card>
+
+After creating an order, confirm it by providing the transaction hash (for crypto orders):
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = 'ord_123'
+const confirmation = {
+  transaction_hash:
+    '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+}
+
+const response = await fetch(
+  `http://localhost:3000/api/orders/${orderId}/confirm`,
+  {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.API_KEY,
+    },
+    body: JSON.stringify(confirmation),
+  },
+)
+
+const { data: confirmedOrder } = await response.json()
+console.log('Order confirmed:', confirmedOrder.status)
+```
+
+```python Python
+order_id = 'ord_123'
+confirmation = {
+    'transaction_hash': '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+}
+
+response = requests.put(
+    f'http://localhost:3000/api/orders/{order_id}/confirm',
+    headers={
+        'Content-Type': 'application/json',
+        'x-api-key': os.getenv('API_KEY')
+    },
+    json=confirmation
+)
+
+confirmed_order = response.json()['data']
+print(f"Order confirmed: {confirmed_order['status']}")
+```
+
+</CodeGroup>
+
+## Managing Orders
+
+### Listing Orders
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await fetch('http://localhost:3000/api/orders', {
+  headers: {
+    'x-api-key': process.env.API_KEY,
+  },
+})
+
+const { data: orders } = await response.json()
+console.log('All orders:', orders)
+```
+
+```python Python
+response = requests.get(
+    'http://localhost:3000/api/orders',
+    headers={'x-api-key': os.getenv('API_KEY')}
+)
+
+orders = response.json()['data']
+print('All orders:', orders)
+```
+
+</CodeGroup>
+
+### Getting Order Details
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = 'ord_123'
+const response = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+  headers: {
+    'x-api-key': process.env.API_KEY,
+  },
+})
+
+const { data: order } = await response.json()
+console.log('Order details:', order)
+```
+
+```python Python
+order_id = 'ord_123'
+response = requests.get(
+    f'http://localhost:3000/api/orders/{order_id}',
+    headers={'x-api-key': os.getenv('API_KEY')}
+)
+
+order = response.json()['data']
+print('Order details:', order)
+```
+
+</CodeGroup>
+
+### Requesting Payment Identifiers
+
+<Card
+  horizontal
+  title="Payment Identifiers Guide"
+  icon="receipt"
+  href="/guides/orders/payment-identifiers"
+>
+  Learn about IMAD/OMAD identifiers for wire transfers.
+</Card>
+
+For fiat orders, you can request IMAD/OMAD payment identifiers:
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = 'ord_123'
+const response = await fetch(
+  `http://localhost:3000/api/orders/${orderId}/payment_identifiers`,
+  {
+    method: 'PUT',
+    headers: {
+      'x-api-key': process.env.API_KEY,
+    },
+  },
+)
+
+const { data: identifiers } = await response.json()
+console.log('Payment identifiers:', {
+  imad: identifiers.imad,
+  omad: identifiers.omad,
+})
+```
+
+```python Python
+order_id = 'ord_123'
+response = requests.put(
+    f'http://localhost:3000/api/orders/{order_id}/payment_identifiers',
+    headers={'x-api-key': os.getenv('API_KEY')}
+)
+
+identifiers = response.json()['data']
+print('Payment identifiers:', {
+    'imad': identifiers['imad'],
+    'omad': identifiers['omad']
+})
+```
+
+</CodeGroup>
+
+## Validation Rules
+
+### 1. Currency Pairs
+
+- Cannot have fiat on both ends
+- Cannot have crypto on both ends
+- Must have one fiat and one crypto
+
+### 2. Amounts
+
+- Must specify amount on exactly one end
+- Amount must be positive
+- System calculates the other amount
+
+### 3. Third-Party Orders
+
+- Require `purpose_of_payment`
+- Require `invoice_file_url`
+- Require `sender_legal_name`
+- Require `sender_bank_account_last_4` for USD wire transfers
+
+## Best Practices
+
+### 1. Error Handling
+
+<CodeGroup>
+
+```typescript TypeScript
+async function createOrderWithRetry(
+  orderData: OrderCreate,
+  maxRetries = 3,
+): Promise<Order> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch('http://localhost:3000/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.API_KEY,
+        },
+        body: JSON.stringify(orderData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error.message)
+      }
+
+      const { data } = await response.json()
+      return data
+    } catch (error) {
+      lastError = error as Error
+      if (attempt === maxRetries) break
+
+      // Exponential backoff
+      await new Promise(resolve =>
+        setTimeout(resolve, Math.pow(2, attempt) * 1000),
+      )
+    }
+  }
+
+  throw new Error(
+    `Failed to create order after ${maxRetries} attempts: ${lastError?.message}`,
+  )
+}
+```
+
+```python Python
+import time
+from typing import TypedDict, Optional
+
+class Order(TypedDict):
+    id: str
+    status: str
+    # Add other order fields as needed
+
+def create_order_with_retry(order_data: dict, max_retries: int = 3) -> Order:
+    last_error = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.post(
+                'http://localhost:3000/api/orders',
+                headers={
+                    'Content-Type': 'application/json',
+                    'x-api-key': os.getenv('API_KEY')
+                },
+                json=order_data
+            )
+            response.raise_for_status()
+            return response.json()['data']
+        except Exception as error:
+            last_error = error
+            if attempt == max_retries:
+                break
+
+            # Exponential backoff
+            time.sleep(2 ** attempt)
+
+    raise Exception(
+        f"Failed to create order after {max_retries} attempts: {str(last_error)}"
+    )
+```
+
+</CodeGroup>
+
+### 2. Input Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+function validateOrder(order: OrderCreate): string[] {
+  const errors: string[] = []
+
+  // Validate currency pair
+  const isFiatFrom = ['USD', 'BRL', 'MXN'].includes(order.from.currency)
+  const isFiatTo = ['USD', 'BRL', 'MXN'].includes(order.to.currency)
+
+  if (isFiatFrom && isFiatTo) {
+    errors.push('Cannot convert between two fiat currencies')
+  }
+  if (!isFiatFrom && !isFiatTo) {
+    errors.push('Cannot convert between two cryptocurrencies')
+  }
+
+  // Validate amounts
+  if (order.from.amount && order.to.amount) {
+    errors.push('Cannot specify both from and to amounts')
+  }
+  if (!order.from.amount && !order.to.amount) {
+    errors.push('Must specify either from or to amount')
+  }
+
+  // Validate third-party requirements
+  if (order.is_third_party) {
+    if (!order.purpose_of_payment) {
+      errors.push('Purpose of payment required for third-party orders')
+    }
+    if (!order.invoice_file_url) {
+      errors.push('Invoice file URL required for third-party orders')
+    }
+  }
+
+  return errors
+}
+```
+
+```python Python
+def validate_order(order: dict) -> list[str]:
+    errors: list[str] = []
+
+    # Validate currency pair
+    fiat_currencies = ['USD', 'BRL', 'MXN']
+    is_fiat_from = order['from']['currency'] in fiat_currencies
+    is_fiat_to = order['to']['currency'] in fiat_currencies
+
+    if is_fiat_from and is_fiat_to:
+        errors.append('Cannot convert between two fiat currencies')
+    if not is_fiat_from and not is_fiat_to:
+        errors.append('Cannot convert between two cryptocurrencies')
+
+    # Validate amounts
+    if 'amount' in order['from'] and 'amount' in order['to']:
+        errors.append('Cannot specify both from and to amounts')
+    if 'amount' not in order['from'] and 'amount' not in order['to']:
+        errors.append('Must specify either from or to amount')
+
+    # Validate third-party requirements
+    if order.get('is_third_party'):
+        if not order.get('purpose_of_payment'):
+            errors.append('Purpose of payment required for third-party orders')
+        if not order.get('invoice_file_url'):
+            errors.append('Invoice file URL required for third-party orders')
+
+    return errors
+```
+
+</CodeGroup>
+
+### 3. Security
+
+- Store API keys in environment variables
+- Validate all input data
+- Implement rate limiting
+- Log all order operations
+
+## Rate Limits
+
+- 100 order creations per hour
+- 1000 order retrievals per hour
+- 50 order updates per hour
+- 50 order deletions per hour
+
+<Note>Contact support to request increased rate limits for your account.</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Order Confirmation"
+    icon="circle-check"
+    href="/guides/orders/confirmation"
+  >
+    Learn how to confirm and track your orders.
+  </Card>
+  <Card
+    title="Payment Identifiers"
+    icon="receipt"
+    href="/guides/orders/payment-identifiers"
+  >
+    Understand how to work with IMAD/OMAD identifiers.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with order creation and
+  management
+</Card>

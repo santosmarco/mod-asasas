@@ -1,0 +1,38 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: sd2-mod-api-production
+  namespace: sd2-mod-production
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      serviceAccountName: cloudrun-compute-sa@sd2-mod-production.iam.gserviceaccount.com
+      containers:
+        - image: gcr.io/sd2-mod-production/api:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: 'production'
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-url
+                  key: latest
+            - name: API_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: api-key-secret
+                  key: latest
+            - name: SLACK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: slack-token
+                  key: latest
+          resources:
+            limits:
+              cpu: '1'
+              memory: '512Mi'

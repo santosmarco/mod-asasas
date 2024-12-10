@@ -1,0 +1,671 @@
+---
+title: API Workflow
+description: Learn the complete workflow for using the SD2 Mod API
+---
+
+This guide explains the complete workflow for using the SD2 Mod API, from authentication to managing orders.
+
+<Card horizontal title="Authentication Guide" icon="key" href="/authentication">
+  Learn more about securing your API requests with authentication.
+</Card>
+
+## Complete Workflow
+
+1. [Authentication](#1-authentication)
+2. [Create Recipients](#2-creating-recipients)
+3. [Create Orders](#3-creating-orders)
+4. [Confirm Orders](#4-confirming-orders)
+5. [Monitor Orders](#5-monitoring-orders)
+6. [Request Payment Identifiers](#6-requesting-payment-identifiers)
+
+## 1. Authentication
+
+All API requests require an API key for authentication. Include your API key in the `x-api-key` header:
+
+<CodeGroup>
+
+```typescript TypeScript
+const headers = {
+  'Content-Type': 'application/json',
+  'x-api-key': process.env.API_KEY,
+}
+
+// Test authentication
+const response = await fetch('http://localhost:3000/api/users', {
+  headers,
+})
+
+if (!response.ok) {
+  throw new Error('Authentication failed')
+}
+
+const { data: user } = await response.json()
+console.log('Authenticated as:', user.email)
+```
+
+```python Python
+import requests
+import os
+
+headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': os.getenv('API_KEY')
+}
+
+# Test authentication
+response = requests.get('http://localhost:3000/api/users', headers=headers)
+
+if not response.ok:
+    raise Exception('Authentication failed')
+
+user = response.json()['data']
+print(f"Authenticated as: {user['email']}")
+```
+
+</CodeGroup>
+
+## 2. Creating Recipients
+
+Before creating orders, set up recipients who will receive the payments.
+
+<Card
+  horizontal
+  title="Recipients Guide"
+  icon="user-group"
+  href="/guides/recipients"
+>
+  Learn more about creating and managing recipients in our detailed Recipients
+  Guide.
+</Card>
+
+### Creating a Crypto Recipient
+
+<CodeGroup>
+
+```typescript TypeScript
+const cryptoRecipient = {
+  type: 'crypto',
+  token: 'USDC_ETH',
+  address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+  business_details: {
+    name: 'Acme Corporation',
+  },
+}
+
+const response = await fetch('http://localhost:3000/api/recipients', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(cryptoRecipient),
+})
+
+const { data: recipient } = await response.json()
+console.log('Created crypto recipient:', recipient.id)
+```
+
+```python Python
+crypto_recipient = {
+    'type': 'crypto',
+    'token': 'USDC_ETH',
+    'address': '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    'business_details': {
+        'name': 'Acme Corporation'
+    }
+}
+
+response = requests.post(
+    'http://localhost:3000/api/recipients',
+    headers=headers,
+    json=crypto_recipient
+)
+
+recipient = response.json()['data']
+print(f"Created crypto recipient: {recipient['id']}")
+```
+
+</CodeGroup>
+
+### Creating a Fiat Recipient
+
+<CodeGroup>
+
+```typescript TypeScript
+const fiatRecipient = {
+  type: 'fiat',
+  currency: 'USD',
+  business_details: {
+    name: 'Acme Corp',
+    address: '123 Business St',
+    city: 'New York',
+    state_province: 'NY',
+    postal_code: '10001',
+    country: 'USA',
+  },
+  destination_bank_account_details: {
+    bank_name: 'Chase Bank',
+    bank_address: '270 Park Avenue, New York, NY 10017',
+    bank_country: 'USA',
+    account_number: '000123456789',
+    account_bic_swift_code: 'CHASUS33',
+  },
+  intermediary_bank_details: {
+    bank_name: 'Citibank',
+    account_routing_number: '021000021',
+  },
+}
+
+const response = await fetch('http://localhost:3000/api/recipients', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(fiatRecipient),
+})
+
+const { data: recipient } = await response.json()
+console.log('Created fiat recipient:', recipient.id)
+```
+
+```python Python
+fiat_recipient = {
+    'type': 'fiat',
+    'currency': 'USD',
+    'business_details': {
+        'name': 'Acme Corp',
+        'address': '123 Business St',
+        'city': 'New York',
+        'state_province': 'NY',
+        'postal_code': '10001',
+        'country': 'USA'
+    },
+    'destination_bank_account_details': {
+        'bank_name': 'Chase Bank',
+        'bank_address': '270 Park Avenue, New York, NY 10017',
+        'bank_country': 'USA',
+        'account_number': '000123456789',
+        'account_bic_swift_code': 'CHASUS33'
+    },
+    'intermediary_bank_details': {
+        'bank_name': 'Citibank',
+        'account_routing_number': '021000021'
+    }
+}
+
+response = requests.post(
+    'http://localhost:3000/api/recipients',
+    headers=headers,
+    json=fiat_recipient
+)
+
+recipient = response.json()['data']
+print(f"Created fiat recipient: {recipient['id']}")
+```
+
+</CodeGroup>
+
+## 3. Creating Orders
+
+Once you have recipients set up, you can create orders.
+
+<Card horizontal title="Orders Guide" icon="file-invoice" href="/guides/orders">
+  Explore our comprehensive Orders Guide for detailed information about creating
+  and managing orders.
+</Card>
+
+### Fiat to Crypto Order
+
+<CodeGroup>
+
+```typescript TypeScript
+const fiatToCryptoOrder = {
+  from: {
+    currency: 'USD',
+    amount: 1000,
+  },
+  to: {
+    currency: 'USDC_ETH',
+    recipient_id: 'rec_123',
+  },
+  is_third_party: false,
+}
+
+const response = await fetch('http://localhost:3000/api/orders', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(fiatToCryptoOrder),
+})
+
+const { data: order } = await response.json()
+console.log('Created order:', order.id)
+```
+
+```python Python
+fiat_to_crypto_order = {
+    'from': {
+        'currency': 'USD',
+        'amount': 1000
+    },
+    'to': {
+        'currency': 'USDC_ETH',
+        'recipient_id': 'rec_123'
+    },
+    'is_third_party': False
+}
+
+response = requests.post(
+    'http://localhost:3000/api/orders',
+    headers=headers,
+    json=fiat_to_crypto_order
+)
+
+order = response.json()['data']
+print(f"Created order: {order['id']}")
+```
+
+</CodeGroup>
+
+### Crypto to Fiat Order
+
+<CodeGroup>
+
+```typescript TypeScript
+const cryptoToFiatOrder = {
+  from: {
+    currency: 'USDC_ETH',
+    amount: 1000,
+  },
+  to: {
+    currency: 'USD',
+    recipient_id: 'rec_456',
+  },
+  is_third_party: true,
+  purpose_of_payment: 'Consulting services',
+  invoice_file_url: 'https://example.com/invoice.pdf',
+  sender_legal_name: 'John Smith',
+  sender_bank_account_last_4: '1234',
+}
+
+const response = await fetch('http://localhost:3000/api/orders', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(cryptoToFiatOrder),
+})
+
+const { data: order } = await response.json()
+console.log('Created order:', order.id)
+```
+
+```python Python
+crypto_to_fiat_order = {
+    'from': {
+        'currency': 'USDC_ETH',
+        'amount': 1000
+    },
+    'to': {
+        'currency': 'USD',
+        'recipient_id': 'rec_456'
+    },
+    'is_third_party': True,
+    'purpose_of_payment': 'Consulting services',
+    'invoice_file_url': 'https://example.com/invoice.pdf',
+    'sender_legal_name': 'John Smith',
+    'sender_bank_account_last_4': '1234'
+}
+
+response = requests.post(
+    'http://localhost:3000/api/orders',
+    headers=headers,
+    json=crypto_to_fiat_order
+)
+
+order = response.json()['data']
+print(f"Created order: {order['id']}")
+```
+
+</CodeGroup>
+
+## 4. Confirming Orders
+
+<Card
+  horizontal
+  title="Order Confirmation Guide"
+  icon="circle-check"
+  href="/guides/orders/confirmation"
+>
+  Learn more about the order confirmation process and requirements.
+</Card>
+
+After creating an order, confirm it by providing the transaction hash (for crypto orders):
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = 'ord_123'
+const confirmation = {
+  transaction_hash:
+    '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+}
+
+const response = await fetch(
+  `http://localhost:3000/api/orders/${orderId}/confirm`,
+  {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(confirmation),
+  },
+)
+
+const { data: confirmedOrder } = await response.json()
+console.log('Order confirmed:', confirmedOrder.status)
+```
+
+```python Python
+order_id = 'ord_123'
+confirmation = {
+    'transaction_hash': '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+}
+
+response = requests.put(
+    f'http://localhost:3000/api/orders/{order_id}/confirm',
+    headers=headers,
+    json=confirmation
+)
+
+confirmed_order = response.json()['data']
+print(f"Order confirmed: {confirmed_order['status']}")
+```
+
+</CodeGroup>
+
+## 5. Monitoring Orders
+
+<Card
+  horizontal
+  title="Monitoring Guide"
+  icon="chart-line"
+  href="/guides/monitoring"
+>
+  Discover comprehensive monitoring tools and best practices.
+</Card>
+
+### Getting Order Details
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = 'ord_123'
+const response = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+  headers,
+})
+
+const { data: order } = await response.json()
+console.log('Order details:', {
+  status: order.status,
+  from: order.from,
+  to: order.to,
+  deposit_instructions: order.deposit_instructions,
+})
+```
+
+```python Python
+order_id = 'ord_123'
+response = requests.get(
+    f'http://localhost:3000/api/orders/{order_id}',
+    headers=headers
+)
+
+order = response.json()['data']
+print('Order details:', {
+    'status': order['status'],
+    'from': order['from'],
+    'to': order['to'],
+    'deposit_instructions': order['deposit_instructions']
+})
+```
+
+</CodeGroup>
+
+### Listing Orders
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await fetch('http://localhost:3000/api/orders', {
+  headers,
+})
+
+const { data: orders } = await response.json()
+console.log('All orders:', orders)
+```
+
+```python Python
+response = requests.get(
+    'http://localhost:3000/api/orders',
+    headers=headers
+)
+
+orders = response.json()['data']
+print('All orders:', orders)
+```
+
+</CodeGroup>
+
+## 6. Requesting Payment Identifiers
+
+<Card
+  horizontal
+  title="Payment Identifiers Guide"
+  icon="receipt"
+  href="/guides/orders/payment-identifiers"
+>
+  Learn about IMAD/OMAD identifiers and how to use them in your transactions.
+</Card>
+
+For fiat orders, you can request IMAD/OMAD payment identifiers:
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = 'ord_123'
+const response = await fetch(
+  `http://localhost:3000/api/orders/${orderId}/payment_identifiers`,
+  {
+    method: 'PUT',
+    headers,
+  },
+)
+
+const { data: identifiers } = await response.json()
+console.log('Payment identifiers:', {
+  imad: identifiers.imad,
+  omad: identifiers.omad,
+})
+
+if (identifiers.notes) {
+  console.log('Notes:', identifiers.notes)
+}
+```
+
+```python Python
+order_id = 'ord_123'
+response = requests.put(
+    f'http://localhost:3000/api/orders/{order_id}/payment_identifiers',
+    headers=headers
+)
+
+identifiers = response.json()['data']
+print('Payment identifiers:', {
+    'imad': identifiers['imad'],
+    'omad': identifiers['omad']
+})
+
+if identifiers.get('notes'):
+    print('Notes:', identifiers['notes'])
+```
+
+</CodeGroup>
+
+## Validation Rules
+
+<Card
+  horizontal
+  title="Validation Guide"
+  icon="shield-check"
+  href="/guides/validation"
+>
+  Understand our comprehensive validation rules and best practices.
+</Card>
+
+1. **Currency Pairs**
+
+   - Cannot have fiat on both ends
+   - Cannot have crypto on both ends
+   - Must have one fiat and one crypto
+
+2. **Amounts**
+
+   - Must specify amount on exactly one end
+   - Amount must be positive
+   - System calculates the other amount
+
+3. **Third-Party Orders**
+   - Require `purpose_of_payment`
+   - Require `invoice_file_url`
+   - Require `sender_legal_name`
+   - Require `sender_bank_account_last_4` for USD wire transfers
+
+## Best Practices
+
+<Card
+  horizontal
+  title="Error Handling Guide"
+  icon="bug"
+  href="/guides/error-handling"
+>
+  Learn how to handle errors effectively in your integration.
+</Card>
+
+1. **Error Handling**
+
+<CodeGroup>
+
+```typescript TypeScript
+async function createOrderWithRetry(
+  orderData: OrderCreate,
+  maxRetries = 3,
+): Promise<Order> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch('http://localhost:3000/api/orders', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(orderData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error.message)
+      }
+
+      const { data } = await response.json()
+      return data
+    } catch (error) {
+      lastError = error as Error
+      if (attempt === maxRetries) break
+
+      # Exponential backoff
+      await new Promise(resolve =>
+        setTimeout(resolve, Math.pow(2, attempt) * 1000),
+      )
+    }
+  }
+
+  throw new Error(
+    `Failed to create order after ${maxRetries} attempts: ${lastError?.message}`,
+  )
+}
+```
+
+```python Python
+import time
+from typing import TypedDict, Optional
+
+class Order(TypedDict):
+    id: str
+    status: str
+    # Add other order fields as needed
+
+def create_order_with_retry(order_data: dict, max_retries: int = 3) -> Order:
+    last_error = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.post(
+                'http://localhost:3000/api/orders',
+                headers=headers,
+                json=order_data
+            )
+            response.raise_for_status()
+            return response.json()['data']
+        except Exception as error:
+            last_error = error
+            if attempt == max_retries:
+                break
+
+            # Exponential backoff
+            time.sleep(2 ** attempt)
+
+    raise Exception(
+        f"Failed to create order after {max_retries} attempts: {str(last_error)}"
+    )
+```
+
+</CodeGroup>
+
+2. **Validation**
+
+   - Validate all inputs before sending
+   - Check currency pair compatibility
+   - Verify recipient exists
+   - Ensure required fields for third-party orders
+
+3. **Security**
+   - Use environment variables for API keys
+   - Implement rate limiting
+   - Log all order operations
+
+<Card horizontal title="Security Guide" icon="shield" href="/guides/security">
+  Learn about our security best practices and recommendations.
+</Card>
+
+## Rate Limits
+
+- 100 order creations per hour
+- 1000 order retrievals per hour
+- 50 order updates per hour
+- 50 order deletions per hour
+
+<Note>Contact support to request increased rate limits for your account.</Note>
+
+## Next Steps
+
+<Card
+  horizontal
+  title="Error Handling Guide"
+  icon="bug"
+  href="/guides/error-handling"
+>
+  Learn how to handle errors and edge cases effectively.
+</Card>
+
+<Card
+  horizontal
+  title="Monitoring Guide"
+  icon="chart-line"
+  href="/guides/monitoring"
+>
+  Set up comprehensive monitoring for your integration.
+</Card>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with your integration
+</Card>

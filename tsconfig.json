@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "module": "NodeNext",
+    "moduleDetection": "force",
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "target": "ESNext",
+    "lib": ["esnext", "DOM", "DOM.Iterable"],
+    "declaration": true,
+    "declarationMap": true,
+    "incremental": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "drizzle", "drizzle.config.ts"]
+}

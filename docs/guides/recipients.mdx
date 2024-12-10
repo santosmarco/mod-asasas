@@ -1,0 +1,426 @@
+---
+title: 'Recipients'
+description: 'Learn how to manage recipients for payments in both crypto and fiat currencies'
+---
+
+Recipients are entities that can receive payments through our API. This guide explains how to create and manage recipients for both cryptocurrency and fiat currency payments.
+
+## Understanding Recipients
+
+<CardGroup cols={2}>
+  <Card title="Crypto Recipients" icon="bitcoin">
+    Receive cryptocurrency payments (USDC, USDT) on supported networks: -
+    Ethereum (ETH) - Tron (TRX)
+  </Card>
+  <Card title="Fiat Recipients" icon="building-columns">
+    Receive traditional currency payments: - USD (United States Dollar) - BRL
+    (Brazilian Real) - MXN (Mexican Peso)
+  </Card>
+</CardGroup>
+
+## Creating Recipients
+
+### Crypto Recipients
+
+To create a crypto recipient, you'll need:
+
+1. The cryptocurrency token (e.g., USDC_ETH, USDT_ETH)
+2. A valid wallet address for the corresponding network
+3. Business details
+
+<CodeGroup>
+
+```typescript TypeScript
+const cryptoRecipient = {
+  type: 'crypto',
+  token: 'USDC_ETH',
+  address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+  business_details: {
+    name: 'Acme Corporation',
+  },
+}
+
+const response = await fetch('http://localhost:3000/api/recipients', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': process.env.API_KEY,
+  },
+  body: JSON.stringify(cryptoRecipient),
+})
+
+const { data: recipient } = await response.json()
+console.log('Created crypto recipient:', recipient.id)
+```
+
+```python Python
+import requests
+import os
+
+crypto_recipient = {
+    'type': 'crypto',
+    'token': 'USDC_ETH',
+    'address': '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    'business_details': {
+        'name': 'Acme Corporation'
+    }
+}
+
+response = requests.post(
+    'http://localhost:3000/api/recipients',
+    headers={
+        'Content-Type': 'application/json',
+        'x-api-key': os.getenv('API_KEY')
+    },
+    json=crypto_recipient
+)
+
+recipient = response.json()['data']
+print(f"Created crypto recipient: {recipient['id']}")
+```
+
+</CodeGroup>
+
+### Fiat Recipients
+
+Creating a fiat recipient requires:
+
+1. Business details
+2. Bank account information
+3. Optional intermediary bank details for international transfers
+
+<CodeGroup>
+
+```typescript TypeScript
+const fiatRecipient = {
+  type: 'fiat',
+  currency: 'USD',
+  business_details: {
+    name: 'Acme Corp',
+    address: '123 Business St',
+    city: 'New York',
+    state_province: 'NY',
+    postal_code: '10001',
+    country: 'USA',
+  },
+  destination_bank_account_details: {
+    bank_name: 'Chase Bank',
+    bank_address: '270 Park Avenue, New York, NY 10017',
+    bank_country: 'USA',
+    account_number: '000123456789',
+    account_bic_swift_code: 'CHASUS33',
+  },
+  intermediary_bank_details: {
+    bank_name: 'Citibank',
+    account_routing_number: '021000021',
+  },
+}
+
+const response = await fetch('http://localhost:3000/api/recipients', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': process.env.API_KEY,
+  },
+  body: JSON.stringify(fiatRecipient),
+})
+
+const { data: recipient } = await response.json()
+console.log('Created fiat recipient:', recipient.id)
+```
+
+```python Python
+fiat_recipient = {
+    'type': 'fiat',
+    'currency': 'USD',
+    'business_details': {
+        'name': 'Acme Corp',
+        'address': '123 Business St',
+        'city': 'New York',
+        'state_province': 'NY',
+        'postal_code': '10001',
+        'country': 'USA'
+    },
+    'destination_bank_account_details': {
+        'bank_name': 'Chase Bank',
+        'bank_address': '270 Park Avenue, New York, NY 10017',
+        'bank_country': 'USA',
+        'account_number': '000123456789',
+        'account_bic_swift_code': 'CHASUS33'
+    },
+    'intermediary_bank_details': {
+        'bank_name': 'Citibank',
+        'account_routing_number': '021000021'
+    }
+}
+
+response = requests.post(
+    'http://localhost:3000/api/recipients',
+    headers={
+        'Content-Type': 'application/json',
+        'x-api-key': os.getenv('API_KEY')
+    },
+    json=fiat_recipient
+)
+
+recipient = response.json()['data']
+print(f"Created fiat recipient: {recipient['id']}")
+```
+
+</CodeGroup>
+
+## Managing Recipients
+
+### Listing Recipients
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await fetch('http://localhost:3000/api/recipients', {
+  headers: {
+    'x-api-key': process.env.API_KEY,
+  },
+})
+
+const { data: recipients } = await response.json()
+console.log('All recipients:', recipients)
+
+// Filter by type
+const cryptoRecipients = recipients.filter(r => r.type === 'crypto')
+const fiatRecipients = recipients.filter(r => r.type === 'fiat')
+```
+
+```python Python
+response = requests.get(
+    'http://localhost:3000/api/recipients',
+    headers={'x-api-key': os.getenv('API_KEY')}
+)
+
+recipients = response.json()['data']
+print('All recipients:', recipients)
+
+# Filter by type
+crypto_recipients = [r for r in recipients if r['type'] == 'crypto']
+fiat_recipients = [r for r in recipients if r['type'] == 'fiat']
+```
+
+</CodeGroup>
+
+### Getting Recipient Details
+
+<CodeGroup>
+
+```typescript TypeScript
+const recipientId = 'rec_123'
+const response = await fetch(
+  `http://localhost:3000/api/recipients/${recipientId}`,
+  {
+    headers: {
+      'x-api-key': process.env.API_KEY,
+    },
+  },
+)
+
+const { data: recipient } = await response.json()
+console.log('Recipient details:', recipient)
+```
+
+```python Python
+recipient_id = 'rec_123'
+response = requests.get(
+    f'http://localhost:3000/api/recipients/{recipient_id}',
+    headers={'x-api-key': os.getenv('API_KEY')}
+)
+
+recipient = response.json()['data']
+print('Recipient details:', recipient)
+```
+
+</CodeGroup>
+
+### Updating Recipients
+
+<CodeGroup>
+
+```typescript TypeScript
+const recipientId = 'rec_123'
+const updates = {
+  business_details: {
+    name: 'Acme Corporation Updated',
+  },
+}
+
+const response = await fetch(
+  `http://localhost:3000/api/recipients/${recipientId}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.API_KEY,
+    },
+    body: JSON.stringify(updates),
+  },
+)
+
+const { data: updatedRecipient } = await response.json()
+console.log('Updated recipient:', updatedRecipient)
+```
+
+```python Python
+recipient_id = 'rec_123'
+updates = {
+    'business_details': {
+        'name': 'Acme Corporation Updated'
+    }
+}
+
+response = requests.patch(
+    f'http://localhost:3000/api/recipients/{recipient_id}',
+    headers={
+        'Content-Type': 'application/json',
+        'x-api-key': os.getenv('API_KEY')
+    },
+    json=updates
+)
+
+updated_recipient = response.json()['data']
+print('Updated recipient:', updated_recipient)
+```
+
+</CodeGroup>
+
+### Deleting Recipients
+
+<CodeGroup>
+
+```typescript TypeScript
+const recipientId = 'rec_123'
+const response = await fetch(
+  `http://localhost:3000/api/recipients/${recipientId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': process.env.API_KEY,
+    },
+  },
+)
+
+if (response.ok) {
+  console.log('Recipient deleted successfully')
+}
+```
+
+```python Python
+recipient_id = 'rec_123'
+response = requests.delete(
+    f'http://localhost:3000/api/recipients/{recipient_id}',
+    headers={'x-api-key': os.getenv('API_KEY')}
+)
+
+if response.ok:
+    print('Recipient deleted successfully')
+```
+
+</CodeGroup>
+
+## Validation Rules
+
+### Crypto Recipients
+
+- Wallet address must be valid for the selected network:
+  - ETH: 42 characters starting with '0x'
+  - TRX: 34 characters starting with 'T'
+- Token must be one of: USDC_ETH, USDT_ETH, USDT_TRX
+- Business name is required
+
+### Fiat Recipients
+
+- Business details:
+  - Name must match bank account details
+  - Valid postal code format for country
+  - Country code must be ISO 3166-1 alpha-3
+- Bank details:
+  - Account number format varies by country
+  - SWIFT/BIC required for international
+  - Valid routing number for US accounts
+
+## Best Practices
+
+### 1. Validate Addresses
+
+```typescript TypeScript
+function isValidEthereumAddress(address: string): boolean {
+  return /^0x[0-9a-fA-F]{40}$/.test(address)
+}
+
+function isValidTronAddress(address: string): boolean {
+  return /^T[A-Za-z0-9]{33}$/.test(address)
+}
+
+// Validate before creating
+if (!isValidEthereumAddress(address)) {
+  throw new Error('Invalid Ethereum address')
+}
+```
+
+### 2. Error Handling
+
+```typescript TypeScript
+try {
+  const response = await fetch('http://localhost:3000/api/recipients', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.API_KEY,
+    },
+    body: JSON.stringify(recipient),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  const { data } = await response.json()
+  return data
+} catch (error) {
+  console.error('Failed to create recipient:', error)
+  throw error
+}
+```
+
+### 3. Security
+
+- Validate all input data
+- Use environment variables
+- Implement rate limiting
+- Log all operations
+
+## Rate Limits
+
+- 100 recipient creations per hour
+- 1000 recipient retrievals per hour
+- 50 recipient updates per hour
+- 50 recipient deletions per hour
+
+<Note>Contact support to request increased rate limits for your account.</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Your First Order"
+    icon="file-invoice"
+    href="/guides/orders"
+  >
+    Learn how to create orders using your recipients.
+  </Card>
+  <Card title="Error Handling" icon="bug" href="/guides/error-handling">
+    Implement robust error handling for your integration.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with recipient setup and
+  management
+</Card>

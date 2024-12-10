@@ -1,0 +1,587 @@
+---
+title: 'Validation'
+description: 'Learn about input validation and data integrity'
+---
+
+This guide explains how to validate data and ensure data integrity when using the SD2 Mod API.
+
+## Input Validation
+
+### 1. Currency Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+const FIAT_CURRENCIES = ['USD', 'BRL', 'MXN'] as const
+const CRYPTO_TOKENS = ['USDC_ETH', 'USDT_ETH', 'USDT_TRX'] as const
+
+function validateCurrencyPair(fromCurrency: string, toCurrency: string) {
+  const errors: string[] = []
+
+  const isFiatFrom = FIAT_CURRENCIES.includes(fromCurrency as any)
+  const isFiatTo = FIAT_CURRENCIES.includes(toCurrency as any)
+
+  if (isFiatFrom && isFiatTo) {
+    errors.push('Cannot convert between two fiat currencies')
+  }
+
+  if (!isFiatFrom && !isFiatTo) {
+    errors.push('Cannot convert between two cryptocurrencies')
+  }
+
+  return errors
+}
+
+// Example usage
+const errors = validateCurrencyPair('USD', 'USDC_ETH')
+if (errors.length > 0) {
+  console.error('Validation errors:', errors)
+}
+```
+
+```python Python
+from typing import List
+
+FIAT_CURRENCIES = ['USD', 'BRL', 'MXN']
+CRYPTO_TOKENS = ['USDC_ETH', 'USDT_ETH', 'USDT_TRX']
+
+def validate_currency_pair(from_currency: str, to_currency: str) -> List[str]:
+    errors: List[str] = []
+
+    is_fiat_from = from_currency in FIAT_CURRENCIES
+    is_fiat_to = to_currency in FIAT_CURRENCIES
+
+    if is_fiat_from and is_fiat_to:
+        errors.append('Cannot convert between two fiat currencies')
+
+    if not is_fiat_from and not is_fiat_to:
+        errors.append('Cannot convert between two cryptocurrencies')
+
+    return errors
+
+# Example usage
+errors = validate_currency_pair('USD', 'USDC_ETH')
+if errors:
+    print('Validation errors:', errors)
+```
+
+</CodeGroup>
+
+### 2. Amount Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+interface AmountValidation {
+  fromAmount?: number
+  toAmount?: number
+  minAmount?: number
+  maxAmount?: number
+}
+
+function validateAmounts({
+  fromAmount,
+  toAmount,
+  minAmount = 0,
+  maxAmount = 1_000_000,
+}: AmountValidation) {
+  const errors: string[] = []
+
+  // Check that exactly one amount is specified
+  if (fromAmount && toAmount) {
+    errors.push('Cannot specify both from and to amounts')
+  }
+  if (!fromAmount && !toAmount) {
+    errors.push('Must specify either from or to amount')
+  }
+
+  // Validate amount range
+  const amount = fromAmount || toAmount
+  if (amount !== undefined) {
+    if (amount <= minAmount) {
+      errors.push(`Amount must be greater than ${minAmount}`)
+    }
+    if (amount > maxAmount) {
+      errors.push(`Amount must not exceed ${maxAmount}`)
+    }
+  }
+
+  return errors
+}
+
+// Example usage
+const errors = validateAmounts({
+  fromAmount: 1000,
+  minAmount: 100,
+  maxAmount: 10000,
+})
+```
+
+```python Python
+from typing import List, Optional
+from dataclasses import dataclass
+
+@dataclass
+class AmountValidation:
+    from_amount: Optional[float] = None
+    to_amount: Optional[float] = None
+    min_amount: float = 0
+    max_amount: float = 1_000_000
+
+def validate_amounts(validation: AmountValidation) -> List[str]:
+    errors: List[str] = []
+
+    # Check that exactly one amount is specified
+    if validation.from_amount and validation.to_amount:
+        errors.append('Cannot specify both from and to amounts')
+    if not validation.from_amount and not validation.to_amount:
+        errors.append('Must specify either from or to amount')
+
+    # Validate amount range
+    amount = validation.from_amount or validation.to_amount
+    if amount is not None:
+        if amount <= validation.min_amount:
+            errors.append(f"Amount must be greater than {validation.min_amount}")
+        if amount > validation.max_amount:
+            errors.append(f"Amount must not exceed {validation.max_amount}")
+
+    return errors
+
+# Example usage
+errors = validate_amounts(AmountValidation(
+    from_amount=1000,
+    min_amount=100,
+    max_amount=10000
+))
+```
+
+</CodeGroup>
+
+### 3. Address Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+function isValidEthereumAddress(address: string): boolean {
+  return /^0x[0-9a-fA-F]{40}$/.test(address)
+}
+
+function isValidTronAddress(address: string): boolean {
+  return /^T[A-Za-z0-9]{33}$/.test(address)
+}
+
+function validateCryptoAddress(network: string, address: string) {
+  const errors: string[] = []
+
+  if (network === 'ETH') {
+    if (!isValidEthereumAddress(address)) {
+      errors.push('Invalid Ethereum address format')
+    }
+  } else if (network === 'TRX') {
+    if (!isValidTronAddress(address)) {
+      errors.push('Invalid Tron address format')
+    }
+  } else {
+    errors.push('Unsupported network')
+  }
+
+  return errors
+}
+
+// Example usage
+const errors = validateCryptoAddress(
+  'ETH',
+  '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+)
+```
+
+```python Python
+import re
+from typing import List
+
+def is_valid_ethereum_address(address: str) -> bool:
+    return bool(re.match(r'^0x[0-9a-fA-F]{40}$', address))
+
+def is_valid_tron_address(address: str) -> bool:
+    return bool(re.match(r'^T[A-Za-z0-9]{33}$', address))
+
+def validate_crypto_address(network: str, address: str) -> List[str]:
+    errors: List[str] = []
+
+    if network == 'ETH':
+        if not is_valid_ethereum_address(address):
+            errors.append('Invalid Ethereum address format')
+    elif network == 'TRX':
+        if not is_valid_tron_address(address):
+            errors.append('Invalid Tron address format')
+    else:
+        errors.append('Unsupported network')
+
+    return errors
+
+# Example usage
+errors = validate_crypto_address(
+    'ETH',
+    '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'
+)
+```
+
+</CodeGroup>
+
+### 4. Bank Details Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+interface BankDetails {
+  accountNumber: string
+  routingNumber?: string
+  swiftCode?: string
+  country: string
+}
+
+function validateBankDetails(details: BankDetails) {
+  const errors: string[] = []
+
+  // Account number validation
+  if (!/^\d{4,17}$/.test(details.accountNumber)) {
+    errors.push('Account number must be 4-17 digits')
+  }
+
+  // US routing number validation
+  if (details.country === 'USA' && details.routingNumber) {
+    if (!/^\d{9}$/.test(details.routingNumber)) {
+      errors.push('US routing number must be 9 digits')
+    }
+  }
+
+  // SWIFT/BIC validation
+  if (details.swiftCode) {
+    if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(details.swiftCode)) {
+      errors.push('Invalid SWIFT/BIC code format')
+    }
+  }
+
+  return errors
+}
+
+// Example usage
+const errors = validateBankDetails({
+  accountNumber: '000123456789',
+  routingNumber: '021000021',
+  swiftCode: 'CHASUS33',
+  country: 'USA',
+})
+```
+
+```python Python
+from dataclasses import dataclass
+from typing import List, Optional
+
+@dataclass
+class BankDetails:
+    account_number: str
+    routing_number: Optional[str] = None
+    swift_code: Optional[str] = None
+    country: str
+
+def validate_bank_details(details: BankDetails) -> List[str]:
+    errors: List[str] = []
+
+    # Account number validation
+    if not re.match(r'^\d{4,17}$', details.account_number):
+        errors.append('Account number must be 4-17 digits')
+
+    # US routing number validation
+    if details.country == 'USA' and details.routing_number:
+        if not re.match(r'^\d{9}$', details.routing_number):
+            errors.append('US routing number must be 9 digits')
+
+    # SWIFT/BIC validation
+    if details.swift_code:
+        if not re.match(r'^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$', details.swift_code):
+            errors.append('Invalid SWIFT/BIC code format')
+
+    return errors
+
+# Example usage
+errors = validate_bank_details(BankDetails(
+    account_number='000123456789',
+    routing_number='021000021',
+    swift_code='CHASUS33',
+    country='USA'
+))
+```
+
+</CodeGroup>
+
+## Order Validation
+
+### 1. Third-Party Order Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+interface ThirdPartyOrder {
+  isThirdParty: boolean
+  purposeOfPayment?: string
+  invoiceFileUrl?: string
+  senderLegalName?: string
+  senderBankAccountLast4?: string
+}
+
+function validateThirdPartyOrder(order: ThirdPartyOrder) {
+  const errors: string[] = []
+
+  if (order.isThirdParty) {
+    if (!order.purposeOfPayment) {
+      errors.push('Purpose of payment required for third-party orders')
+    }
+    if (!order.invoiceFileUrl) {
+      errors.push('Invoice file URL required for third-party orders')
+    }
+    if (!order.senderLegalName) {
+      errors.push('Sender legal name required for third-party orders')
+    }
+    if (!order.senderBankAccountLast4) {
+      errors.push(
+        'Last 4 digits of sender bank account required for third-party orders',
+      )
+    }
+  }
+
+  return errors
+}
+
+// Example usage
+const errors = validateThirdPartyOrder({
+  isThirdParty: true,
+  purposeOfPayment: 'Consulting services',
+  invoiceFileUrl: 'https://example.com/invoice.pdf',
+  senderLegalName: 'John Smith',
+  senderBankAccountLast4: '1234',
+})
+```
+
+```python Python
+from dataclasses import dataclass
+from typing import List, Optional
+
+@dataclass
+class ThirdPartyOrder:
+    is_third_party: bool
+    purpose_of_payment: Optional[str] = None
+    invoice_file_url: Optional[str] = None
+    sender_legal_name: Optional[str] = None
+    sender_bank_account_last4: Optional[str] = None
+
+def validate_third_party_order(order: ThirdPartyOrder) -> List[str]:
+    errors: List[str] = []
+
+    if order.is_third_party:
+        if not order.purpose_of_payment:
+            errors.append('Purpose of payment required for third-party orders')
+        if not order.invoice_file_url:
+            errors.append('Invoice file URL required for third-party orders')
+        if not order.sender_legal_name:
+            errors.append('Sender legal name required for third-party orders')
+        if not order.sender_bank_account_last4:
+            errors.append(
+                'Last 4 digits of sender bank account required for third-party orders'
+            )
+
+    return errors
+
+# Example usage
+errors = validate_third_party_order(ThirdPartyOrder(
+    is_third_party=True,
+    purpose_of_payment='Consulting services',
+    invoice_file_url='https://example.com/invoice.pdf',
+    sender_legal_name='John Smith',
+    sender_bank_account_last4='1234'
+))
+```
+
+</CodeGroup>
+
+### 2. Complete Order Validation
+
+<CodeGroup>
+
+```typescript TypeScript
+interface OrderValidation {
+  fromCurrency: string
+  toCurrency: string
+  fromAmount?: number
+  toAmount?: number
+  isThirdParty: boolean
+  purposeOfPayment?: string
+  invoiceFileUrl?: string
+  senderLegalName?: string
+  senderBankAccountLast4?: string
+}
+
+function validateOrder(order: OrderValidation) {
+  const errors: Record<string, string[]> = {}
+
+  // Currency validation
+  const currencyErrors = validateCurrencyPair(
+    order.fromCurrency,
+    order.toCurrency,
+  )
+  if (currencyErrors.length > 0) {
+    errors.currency = currencyErrors
+  }
+
+  // Amount validation
+  const amountErrors = validateAmounts({
+    fromAmount: order.fromAmount,
+    toAmount: order.toAmount,
+  })
+  if (amountErrors.length > 0) {
+    errors.amount = amountErrors
+  }
+
+  // Third-party validation
+  const thirdPartyErrors = validateThirdPartyOrder({
+    isThirdParty: order.isThirdParty,
+    purposeOfPayment: order.purposeOfPayment,
+    invoiceFileUrl: order.invoiceFileUrl,
+    senderLegalName: order.senderLegalName,
+    senderBankAccountLast4: order.senderBankAccountLast4,
+  })
+  if (thirdPartyErrors.length > 0) {
+    errors.thirdParty = thirdPartyErrors
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  }
+}
+
+// Example usage
+const validation = validateOrder({
+  fromCurrency: 'USD',
+  toCurrency: 'USDC_ETH',
+  fromAmount: 1000,
+  isThirdParty: true,
+  purposeOfPayment: 'Consulting services',
+  invoiceFileUrl: 'https://example.com/invoice.pdf',
+  senderLegalName: 'John Smith',
+  senderBankAccountLast4: '1234',
+})
+
+if (!validation.isValid) {
+  console.error('Validation errors:', validation.errors)
+}
+```
+
+```python Python
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+@dataclass
+class OrderValidation:
+    from_currency: str
+    to_currency: str
+    from_amount: Optional[float] = None
+    to_amount: Optional[float] = None
+    is_third_party: bool = False
+    purpose_of_payment: Optional[str] = None
+    invoice_file_url: Optional[str] = None
+    sender_legal_name: Optional[str] = None
+    sender_bank_account_last4: Optional[str] = None
+
+def validate_order(order: OrderValidation) -> Dict[str, List[str]]:
+    errors: Dict[str, List[str]] = {}
+
+    # Currency validation
+    currency_errors = validate_currency_pair(
+        order.from_currency,
+        order.to_currency
+    )
+    if currency_errors:
+        errors['currency'] = currency_errors
+
+    # Amount validation
+    amount_errors = validate_amounts(AmountValidation(
+        from_amount=order.from_amount,
+        to_amount=order.to_amount
+    ))
+    if amount_errors:
+        errors['amount'] = amount_errors
+
+    # Third-party validation
+    third_party_errors = validate_third_party_order(ThirdPartyOrder(
+        is_third_party=order.is_third_party,
+        purpose_of_payment=order.purpose_of_payment,
+        invoice_file_url=order.invoice_file_url,
+        sender_legal_name=order.sender_legal_name,
+        sender_bank_account_last4=order.sender_bank_account_last4
+    ))
+    if third_party_errors:
+        errors['third_party'] = third_party_errors
+
+    return {
+        'is_valid': len(errors) == 0,
+        'errors': errors
+    }
+
+# Example usage
+validation = validate_order(OrderValidation(
+    from_currency='USD',
+    to_currency='USDC_ETH',
+    from_amount=1000,
+    is_third_party=True,
+    purpose_of_payment='Consulting services',
+    invoice_file_url='https://example.com/invoice.pdf',
+    sender_legal_name='John Smith',
+    sender_bank_account_last4='1234'
+))
+
+if not validation['is_valid']:
+    print('Validation errors:', validation['errors'])
+```
+
+</CodeGroup>
+
+## Best Practices
+
+1. **Validate Early**
+
+   - Check data before making API calls
+   - Provide clear error messages
+   - Return all validation errors at once
+
+2. **Sanitize Input**
+
+   - Trim whitespace
+   - Remove special characters
+   - Normalize data formats
+
+3. **Use Strong Types**
+
+   - Define interfaces/types
+   - Use enums for fixed values
+   - Validate type constraints
+
+4. **Handle Edge Cases**
+   - Check for null/undefined
+   - Validate number ranges
+   - Consider international formats
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="bug" href="/guides/error-handling">
+    Learn how to handle validation errors effectively.
+  </Card>
+  <Card title="Security Guide" icon="shield-check" href="/guides/security">
+    Understand our security best practices.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with validation issues
+</Card>

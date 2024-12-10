@@ -1,0 +1,390 @@
+---
+title: 'Quickstart'
+description: 'Get started with the SD2 Mod API in minutes'
+---
+
+Follow this guide to start using the SD2 Mod API in your application.
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+1. A SD2 Mod account
+2. Your API key
+3. Basic knowledge of REST APIs
+4. Your preferred programming language
+
+## Authentication
+
+<Card horizontal title="Authentication Guide" icon="key" href="/authentication">
+  Learn more about securing your API requests with authentication.
+</Card>
+
+All API requests require an API key in the `x-api-key` header:
+
+<CodeGroup>
+
+```typescript TypeScript
+const headers = {
+  'Content-Type': 'application/json',
+  'x-api-key': process.env.API_KEY,
+}
+
+// Test authentication
+const response = await fetch('http://localhost:3000/api/users', {
+  headers,
+})
+
+if (!response.ok) {
+  throw new Error('Authentication failed')
+}
+
+const { data: user } = await response.json()
+console.log('Authenticated as:', user.email)
+```
+
+```python Python
+import requests
+import os
+
+headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': os.getenv('API_KEY')
+}
+
+# Test authentication
+response = requests.get(
+    'http://localhost:3000/api/users',
+    headers=headers
+)
+
+response.raise_for_status()
+user = response.json()['data']
+print(f"Authenticated as: {user['email']}")
+```
+
+</CodeGroup>
+
+## Creating Recipients
+
+<Card
+  horizontal
+  title="Recipients Guide"
+  icon="user-group"
+  href="/guides/recipients"
+>
+  Learn more about creating and managing recipients.
+</Card>
+
+Before creating orders, set up a recipient:
+
+<CodeGroup>
+
+```typescript TypeScript
+// Create a crypto recipient
+const cryptoRecipient = {
+  type: 'crypto',
+  token: 'USDC_ETH',
+  address: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+  business_details: {
+    name: 'Acme Corporation',
+  },
+}
+
+const response = await fetch('http://localhost:3000/api/recipients', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(cryptoRecipient),
+})
+
+const { data: recipient } = await response.json()
+console.log('Created recipient:', recipient.id)
+```
+
+```python Python
+# Create a crypto recipient
+crypto_recipient = {
+    'type': 'crypto',
+    'token': 'USDC_ETH',
+    'address': '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    'business_details': {
+        'name': 'Acme Corporation'
+    }
+}
+
+response = requests.post(
+    'http://localhost:3000/api/recipients',
+    headers=headers,
+    json=crypto_recipient
+)
+
+recipient = response.json()['data']
+print(f"Created recipient: {recipient['id']}")
+```
+
+</CodeGroup>
+
+## Creating Orders
+
+<Card horizontal title="Orders Guide" icon="file-invoice" href="/guides/orders">
+  Learn more about creating and managing orders.
+</Card>
+
+Create an order using your recipient:
+
+<CodeGroup>
+
+```typescript TypeScript
+const order = {
+  from: {
+    currency: 'USD',
+    amount: 1000,
+  },
+  to: {
+    currency: 'USDC_ETH',
+    recipient_id: recipient.id,
+  },
+  is_third_party: false,
+}
+
+const response = await fetch('http://localhost:3000/api/orders', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(order),
+})
+
+const { data: createdOrder } = await response.json()
+console.log('Created order:', createdOrder.id)
+```
+
+```python Python
+order = {
+    'from': {
+        'currency': 'USD',
+        'amount': 1000
+    },
+    'to': {
+        'currency': 'USDC_ETH',
+        'recipient_id': recipient['id']
+    },
+    'is_third_party': False
+}
+
+response = requests.post(
+    'http://localhost:3000/api/orders',
+    headers=headers,
+    json=order
+)
+
+created_order = response.json()['data']
+print(f"Created order: {created_order['id']}")
+```
+
+</CodeGroup>
+
+## Confirming Orders
+
+<Card
+  horizontal
+  title="Order Confirmation Guide"
+  icon="check-circle"
+  href="/guides/orders/confirmation"
+>
+  Learn more about the order confirmation process.
+</Card>
+
+For crypto orders, confirm with the transaction hash:
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = createdOrder.id
+const confirmation = {
+  transaction_hash:
+    '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+}
+
+const response = await fetch(
+  `http://localhost:3000/api/orders/${orderId}/confirm`,
+  {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(confirmation),
+  },
+)
+
+const { data: confirmedOrder } = await response.json()
+console.log('Order confirmed:', confirmedOrder.status)
+```
+
+```python Python
+order_id = created_order['id']
+confirmation = {
+    'transaction_hash': '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+}
+
+response = requests.put(
+    f'http://localhost:3000/api/orders/{order_id}/confirm',
+    headers=headers,
+    json=confirmation
+)
+
+confirmed_order = response.json()['data']
+print(f"Order confirmed: {confirmed_order['status']}")
+```
+
+</CodeGroup>
+
+## Monitoring Orders
+
+<Card
+  horizontal
+  title="Monitoring Guide"
+  icon="chart-line"
+  href="/guides/monitoring"
+>
+  Learn more about monitoring your orders.
+</Card>
+
+Track order status:
+
+<CodeGroup>
+
+```typescript TypeScript
+const orderId = confirmedOrder.id
+const response = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+  headers,
+})
+
+const { data: order } = await response.json()
+console.log('Order status:', order.status)
+```
+
+```python Python
+order_id = confirmed_order['id']
+response = requests.get(
+    f'http://localhost:3000/api/orders/{order_id}',
+    headers=headers
+)
+
+order = response.json()['data']
+print(f"Order status: {order['status']}")
+```
+
+</CodeGroup>
+
+## Payment Identifiers
+
+<Card
+  horizontal
+  title="Payment Identifiers Guide"
+  icon="receipt"
+  href="/guides/orders/payment-identifiers"
+>
+  Learn about IMAD/OMAD identifiers for wire transfers.
+</Card>
+
+For fiat orders, request payment identifiers:
+
+<CodeGroup>
+
+```typescript TypeScript
+const response = await fetch(
+  `http://localhost:3000/api/orders/${orderId}/payment_identifiers`,
+  {
+    method: 'PUT',
+    headers,
+  },
+)
+
+const { data: identifiers } = await response.json()
+console.log('Payment identifiers:', {
+  imad: identifiers.imad,
+  omad: identifiers.omad,
+})
+```
+
+```python Python
+response = requests.put(
+    f'http://localhost:3000/api/orders/{order_id}/payment_identifiers',
+    headers=headers
+)
+
+identifiers = response.json()['data']
+print('Payment identifiers:', {
+    'imad': identifiers['imad'],
+    'omad': identifiers['omad']
+})
+```
+
+</CodeGroup>
+
+## Error Handling
+
+Implement robust error handling:
+
+<CodeGroup>
+
+```typescript TypeScript
+try {
+  const response = await fetch('http://localhost:3000/api/orders', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(order),
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  const { data } = await response.json()
+  console.log('Success:', data)
+} catch (error) {
+  console.error('Error:', error.message)
+}
+```
+
+```python Python
+try:
+    response = requests.post(
+        'http://localhost:3000/api/orders',
+        headers=headers,
+        json=order
+    )
+    response.raise_for_status()
+
+    data = response.json()['data']
+    print('Success:', data)
+except requests.exceptions.RequestException as error:
+    print('Error:', str(error))
+```
+
+</CodeGroup>
+
+## Rate Limits
+
+- 1000 requests per hour for most endpoints
+- 100 order creations per hour
+- 50 order confirmations per hour
+
+<Note>Contact support to request increased rate limits for your account.</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Complete Workflow"
+    icon="diagram-project"
+    href="/guides/workflow"
+  >
+    Learn the complete API workflow.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Explore all available endpoints.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with your integration
+</Card>

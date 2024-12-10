@@ -1,0 +1,457 @@
+---
+title: 'Confirming Orders'
+description: 'Learn how to confirm and track your orders'
+---
+
+This guide explains how to confirm orders and track their status through the confirmation process.
+
+## Understanding Order Confirmation
+
+<CardGroup cols={2}>
+  <Card title="Crypto Orders" icon="bitcoin">
+    Require transaction hash verification for confirmation
+  </Card>
+  <Card title="Fiat Orders" icon="building-columns">
+    Require payment identifiers (IMAD/OMAD) for tracking
+  </Card>
+</CardGroup>
+
+## Order Status Flow
+
+1. `pending`: Initial state after creation
+2. `submitted`: Order confirmed with transaction hash
+3. `raised`: Funds detected
+4. `sent`: Transfer initiated
+5. `received`: Transfer completed
+6. `cancelled`: Order cancelled
+
+## Confirming Orders
+
+### Crypto Order Confirmation
+
+For cryptocurrency orders, provide the blockchain transaction hash:
+
+<CodeGroup>
+
+```typescript TypeScript
+interface OrderConfirm {
+  transaction_hash: string
+}
+
+async function confirmOrder(orderId: string, data: OrderConfirm) {
+  const response = await fetch(
+    `http://localhost:3000/api/orders/${orderId}/confirm`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.API_KEY,
+      },
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  return response.json()
+}
+
+// Example usage
+const orderId = 'ord_123'
+const confirmation = {
+  transaction_hash:
+    '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+}
+
+const { data: confirmedOrder } = await confirmOrder(orderId, confirmation)
+console.log('Order confirmed:', confirmedOrder.status)
+```
+
+```python Python
+from typing import TypedDict
+import requests
+import os
+
+class OrderConfirm(TypedDict):
+    transaction_hash: str
+
+def confirm_order(order_id: str, data: OrderConfirm):
+    response = requests.put(
+        f'http://localhost:3000/api/orders/{order_id}/confirm',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        },
+        json=data
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+# Example usage
+order_id = 'ord_123'
+confirmation = {
+    'transaction_hash': '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+}
+
+confirmed_order = confirm_order(order_id, confirmation)['data']
+print(f"Order confirmed: {confirmed_order['status']}")
+```
+
+</CodeGroup>
+
+### Fiat Order Confirmation
+
+For fiat orders, request payment identifiers (IMAD/OMAD):
+
+<CodeGroup>
+
+```typescript TypeScript
+async function requestPaymentIdentifiers(orderId: string) {
+  const response = await fetch(
+    `http://localhost:3000/api/orders/${orderId}/payment_identifiers`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.API_KEY,
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  return response.json()
+}
+
+// Example usage
+const orderId = 'ord_123'
+const { data: identifiers } = await requestPaymentIdentifiers(orderId)
+console.log('Payment identifiers:', {
+  imad: identifiers.imad,
+  omad: identifiers.omad,
+})
+
+if (identifiers.notes) {
+  console.log('Notes:', identifiers.notes)
+}
+```
+
+```python Python
+def request_payment_identifiers(order_id: str):
+    response = requests.put(
+        f'http://localhost:3000/api/orders/{order_id}/payment_identifiers',
+        headers={
+            'Content-Type': 'application/json',
+            'x-api-key': os.getenv('API_KEY')
+        }
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+# Example usage
+order_id = 'ord_123'
+identifiers = request_payment_identifiers(order_id)['data']
+print('Payment identifiers:', {
+    'imad': identifiers['imad'],
+    'omad': identifiers['omad']
+})
+
+if 'notes' in identifiers:
+    print('Notes:', identifiers['notes'])
+```
+
+</CodeGroup>
+
+## Tracking Order Status
+
+Monitor the order's status after confirmation:
+
+<CodeGroup>
+
+```typescript TypeScript
+async function getOrderStatus(orderId: string) {
+  const response = await fetch(`http://localhost:3000/api/orders/${orderId}`, {
+    headers: {
+      'x-api-key': process.env.API_KEY,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  return response.json()
+}
+
+// Example usage
+const orderId = 'ord_123'
+const { data: order } = await getOrderStatus(orderId)
+console.log('Order status:', order.status)
+
+// Check specific status
+if (order.status === 'received') {
+  console.log('Transfer completed successfully')
+} else if (order.status === 'raised') {
+  console.log('Funds detected, transfer pending')
+}
+```
+
+```python Python
+def get_order_status(order_id: str):
+    response = requests.get(
+        f'http://localhost:3000/api/orders/{order_id}',
+        headers={'x-api-key': os.getenv('API_KEY')}
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+# Example usage
+order_id = 'ord_123'
+order = get_order_status(order_id)['data']
+print('Order status:', order['status'])
+
+# Check specific status
+if order['status'] == 'received':
+    print('Transfer completed successfully')
+elif order['status'] == 'raised':
+    print('Funds detected, transfer pending')
+```
+
+</CodeGroup>
+
+## Validation Rules
+
+### Transaction Hash Validation
+
+- Required for crypto orders
+- Must be a valid hash format for the network:
+  - ETH: 66 characters starting with '0x'
+  - TRX: 64 characters
+
+### Payment Identifiers
+
+- IMAD/OMAD are assigned after funds are detected
+- Format varies by bank and region
+- May take some time to be assigned
+
+## Best Practices
+
+### 1. Confirmation Retry Logic
+
+<CodeGroup>
+
+```typescript TypeScript
+async function confirmOrderWithRetry(
+  orderId: string,
+  data: OrderConfirm,
+  maxRetries = 3,
+): Promise<Order> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/orders/${orderId}/confirm`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.API_KEY,
+          },
+          body: JSON.stringify(data),
+        },
+      )
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error.message)
+      }
+
+      const { data: order } = await response.json()
+      return order
+    } catch (error) {
+      lastError = error as Error
+      if (attempt === maxRetries) break
+
+      // Exponential backoff
+      await new Promise(resolve =>
+        setTimeout(resolve, Math.pow(2, attempt) * 1000),
+      )
+    }
+  }
+
+  throw new Error(
+    `Failed to confirm order after ${maxRetries} attempts: ${lastError?.message}`,
+  )
+}
+```
+
+```python Python
+import time
+from typing import TypedDict, Optional
+
+class Order(TypedDict):
+    id: str
+    status: str
+    # Add other order fields as needed
+
+def confirm_order_with_retry(
+    order_id: str,
+    data: OrderConfirm,
+    max_retries: int = 3
+) -> Order:
+    last_error = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = requests.put(
+                f'http://localhost:3000/api/orders/{order_id}/confirm',
+                headers={
+                    'Content-Type': 'application/json',
+                    'x-api-key': os.getenv('API_KEY')
+                },
+                json=data
+            )
+            response.raise_for_status()
+            return response.json()['data']
+        except Exception as error:
+            last_error = error
+            if attempt == max_retries:
+                break
+
+            # Exponential backoff
+            time.sleep(2 ** attempt)
+
+    raise Exception(
+        f"Failed to confirm order after {max_retries} attempts: {str(last_error)}"
+    )
+```
+
+</CodeGroup>
+
+### 2. Status Polling
+
+<CodeGroup>
+
+```typescript TypeScript
+async function pollOrderStatus(
+  orderId: string,
+  targetStatus: string,
+  maxAttempts = 10,
+  interval = 5000,
+): Promise<Order> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const { data: order } = await getOrderStatus(orderId)
+
+    if (order.status === targetStatus) {
+      return order
+    }
+
+    if (order.status === 'cancelled') {
+      throw new Error('Order was cancelled')
+    }
+
+    if (attempt === maxAttempts) {
+      throw new Error(`Order did not reach ${targetStatus} status`)
+    }
+
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+
+  throw new Error('Should not reach here')
+}
+
+// Example usage
+try {
+  const order = await pollOrderStatus('ord_123', 'received')
+  console.log('Transfer completed:', order)
+} catch (error) {
+  console.error('Failed to complete transfer:', error)
+}
+```
+
+```python Python
+import time
+from typing import TypedDict, Optional
+
+class Order(TypedDict):
+    id: str
+    status: str
+    # Add other order fields as needed
+
+def poll_order_status(
+    order_id: str,
+    target_status: str,
+    max_attempts: int = 10,
+    interval: float = 5.0
+) -> Order:
+    for attempt in range(1, max_attempts + 1):
+        order = get_order_status(order_id)['data']
+
+        if order['status'] == target_status:
+            return order
+
+        if order['status'] == 'cancelled':
+            raise Exception('Order was cancelled')
+
+        if attempt == max_attempts:
+            raise Exception(f"Order did not reach {target_status} status")
+
+        time.sleep(interval)
+
+    raise Exception('Should not reach here')
+
+# Example usage
+try:
+    order = poll_order_status('ord_123', 'received')
+    print('Transfer completed:', order)
+except Exception as error:
+    print('Failed to complete transfer:', error)
+```
+
+</CodeGroup>
+
+### 3. Error Handling
+
+- Validate transaction hashes before submission
+- Handle network timeouts gracefully
+- Implement exponential backoff
+- Log all confirmation attempts
+
+## Rate Limits
+
+- 50 confirmation attempts per hour
+- 1000 status checks per hour
+- 50 payment identifier requests per hour
+
+<Note>Contact support to request increased rate limits for your account.</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Payment Identifiers"
+    icon="receipt"
+    href="/guides/orders/payment-identifiers"
+  >
+    Learn more about IMAD/OMAD identifiers.
+  </Card>
+  <Card title="Order Monitoring" icon="chart-line" href="/guides/monitoring">
+    Set up comprehensive order monitoring.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with order confirmation and
+  tracking
+</Card>

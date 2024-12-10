@@ -1,0 +1,359 @@
+---
+title: 'Authentication'
+description: 'Learn how to authenticate your API requests'
+---
+
+# Authentication
+
+The SD2 Mod API uses API key authentication to secure all endpoints. This guide explains how to obtain, use, and manage your API keys securely.
+
+## Getting Your API Key
+
+<Card horizontal title="API Key Management" icon="key" href="/guides/api-keys">
+  Learn how to create, rotate, and manage your API keys securely.
+</Card>
+
+1. Log in to your SD2 Mod account
+2. Navigate to **Settings** > **API Keys**
+3. Click **Generate New Key**
+4. Save your key securely - it won't be shown again
+
+<Warning>
+  Never share your API key or commit it to version control. Always use
+  environment variables to store sensitive credentials.
+</Warning>
+
+## Using Your API Key
+
+Include your API key in the `x-api-key` header with all API requests:
+
+<CodeGroup>
+
+```typescript TypeScript
+const headers = {
+  'Content-Type': 'application/json',
+  'x-api-key': process.env.API_KEY,
+}
+
+// Test authentication
+const response = await fetch('http://localhost:3000/api/users', {
+  headers,
+})
+
+if (!response.ok) {
+  throw new Error('Authentication failed')
+}
+
+const { data: user } = await response.json()
+console.log('Authenticated as:', user.email)
+```
+
+```python Python
+import requests
+import os
+
+headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': os.getenv('API_KEY')
+}
+
+# Test authentication
+try:
+    response = requests.get(
+        'http://localhost:3000/api/users',
+        headers=headers
+    )
+    response.raise_for_status()
+    user = response.json()['data']
+    print(f"Authenticated as: {user['email']}")
+except requests.exceptions.RequestException as e:
+    print(f"Authentication failed: {e}")
+```
+
+</CodeGroup>
+
+## Error Responses
+
+If authentication fails, you'll receive a 401 Unauthorized response:
+
+```json
+{
+  "status": "error",
+  "error": {
+    "message": "Invalid or missing API key"
+  }
+}
+```
+
+Common authentication errors:
+
+| Status Code | Message                    | Description                                         |
+| ----------- | -------------------------- | --------------------------------------------------- |
+| 401         | Invalid or missing API key | The API key is missing or incorrect                 |
+| 401         | API key expired            | The API key has expired and needs to be renewed     |
+| 403         | Insufficient permissions   | The API key doesn't have permission for this action |
+| 429         | Too many requests          | You've exceeded the rate limit for this API key     |
+
+## Best Practices
+
+<Card
+  horizontal
+  title="Security Best Practices"
+  icon="shield-check"
+  href="/guides/security"
+>
+  Learn about our recommended security practices and guidelines.
+</Card>
+
+### Secure Storage
+
+Store your API key securely using environment variables:
+
+<CodeGroup>
+
+```typescript TypeScript
+// Load from .env file
+import 'dotenv/config'
+
+const apiKey = process.env.API_KEY
+if (!apiKey) {
+  throw new Error('API key not configured')
+}
+
+const headers = {
+  'Content-Type': 'application/json',
+  'x-api-key': apiKey,
+}
+```
+
+```python Python
+import os
+from dotenv import load_dotenv
+
+# Load from .env file
+load_dotenv()
+
+api_key = os.getenv('API_KEY')
+if not api_key:
+    raise ValueError('API key not configured')
+
+headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': api_key
+}
+```
+
+</CodeGroup>
+
+Example `.env` file:
+
+```plaintext
+API_KEY=your_api_key_here
+```
+
+<Warning>
+  Always add `.env` to your `.gitignore` file to prevent accidentally committing
+  sensitive credentials.
+</Warning>
+
+### Key Rotation
+
+<Card
+  horizontal
+  title="Key Rotation Guide"
+  icon="rotate"
+  href="/guides/key-rotation"
+>
+  Learn how to safely rotate your API keys without service interruption.
+</Card>
+
+Regularly rotate your API keys to minimize security risks:
+
+1. Generate a new API key
+2. Update your applications to use the new key
+3. Monitor for any errors
+4. Delete the old key after confirming everything works
+
+### Error Handling
+
+Implement robust error handling for authentication failures:
+
+<CodeGroup>
+
+```typescript TypeScript
+class AuthError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+  ) {
+    super(message)
+    this.name = 'AuthError'
+  }
+}
+
+async function makeAuthenticatedRequest(
+  url: string,
+  options: RequestInit = {},
+) {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.API_KEY,
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new AuthError(error.error.message, response.status)
+    }
+
+    return response.json()
+  } catch (error) {
+    if (error instanceof AuthError) {
+      // Handle authentication errors
+      if (error.statusCode === 401) {
+        console.error('Invalid API key - please check your credentials')
+      } else if (error.statusCode === 429) {
+        console.error('Rate limit exceeded - please try again later')
+      }
+    }
+    throw error
+  }
+}
+```
+
+```python Python
+from typing import Optional, Dict, Any
+import requests
+
+class AuthError(Exception):
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+def make_authenticated_request(
+    url: str,
+    method: str = 'GET',
+    data: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    try:
+        response = requests.request(
+            method,
+            url,
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': os.getenv('API_KEY')
+            },
+            json=data
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            raise AuthError('Invalid API key - please check your credentials', 401)
+        elif e.response.status_code == 429:
+            raise AuthError('Rate limit exceeded - please try again later', 429)
+        raise
+```
+
+</CodeGroup>
+
+### Rate Limiting
+
+The API implements rate limiting per API key:
+
+- 1000 requests per hour for most endpoints
+- 100 requests per hour for high-impact operations
+- Rate limits are applied per API key
+
+When you exceed the rate limit, you'll receive a 429 Too Many Requests response:
+
+```json
+{
+  "status": "error",
+  "error": {
+    "message": "Rate limit exceeded. Please try again in 60 seconds.",
+    "reset_at": "2024-03-15T10:00:00Z"
+  }
+}
+```
+
+<Note>
+  Contact support if you need increased rate limits for your use case.
+</Note>
+
+## SDK Support
+
+Our official SDKs handle authentication automatically:
+
+<CardGroup cols={3}>
+  <Card title="TypeScript" icon="js">
+    ```bash npm install @sd2-mod/typescript ```
+  </Card>
+  <Card title="Python" icon="python">
+    ```bash pip install sd2-mod-python ```
+  </Card>
+  <Card title="Go" icon="golang">
+    ```bash go get github.com/sd2-mod/go ```
+  </Card>
+</CardGroup>
+
+Example using the TypeScript SDK:
+
+```typescript
+import { SD2ModAPI } from '@sd2-mod/typescript'
+
+const client = new SD2ModAPI({
+  apiKey: process.env.API_KEY,
+})
+
+// SDK handles authentication automatically
+const user = await client.users.getCurrentUser()
+```
+
+## Security Recommendations
+
+1. **Use Environment Variables**
+
+   - Never hardcode API keys
+   - Use `.env` files or secure secrets management
+   - Rotate keys regularly
+
+2. **Implement Retry Logic**
+
+   - Handle rate limits gracefully
+   - Use exponential backoff
+   - Set reasonable timeouts
+
+3. **Monitor Usage**
+
+   - Track API key usage
+   - Set up alerts for unusual patterns
+   - Monitor rate limit headers
+
+4. **Access Control**
+   - Use separate keys for different environments
+   - Limit key access to necessary services
+   - Revoke compromised keys immediately
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Create Your First Order"
+    icon="file-invoice"
+    href="/guides/orders"
+  >
+    Learn how to create and manage orders using your API key.
+  </Card>
+  <Card title="Error Handling" icon="bug" href="/guides/error-handling">
+    Implement robust error handling for your integration.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with authentication issues
+</Card>

@@ -1,0 +1,571 @@
+---
+title: 'Error Handling'
+description: 'Learn how to handle errors effectively in your integration'
+---
+
+This guide explains how to handle errors effectively when using the SD2 Mod API.
+
+## Error Response Format
+
+All API errors follow a consistent format:
+
+```json
+{
+  "status": "error",
+  "error": {
+    "message": "Human-readable error message",
+    "code": "ERROR_CODE",
+    "fields": {
+      "field_name": ["Error message for this field"]
+    }
+  }
+}
+```
+
+## Common Error Types
+
+<CardGroup cols={2}>
+  <Card title="Authentication Errors" icon="key">
+    - 401: Invalid or missing API key - 403: Insufficient permissions
+  </Card>
+  <Card title="Validation Errors" icon="check">
+    - 400: Invalid input data - 422: Unprocessable entity
+  </Card>
+  <Card title="Resource Errors" icon="database">
+    - 404: Resource not found - 409: Resource conflict
+  </Card>
+  <Card title="Rate Limit Errors" icon="gauge">
+    - 429: Too many requests - Includes retry-after header
+  </Card>
+</CardGroup>
+
+## Handling Errors
+
+### Basic Error Handling
+
+<CodeGroup>
+
+```typescript TypeScript
+interface ApiError {
+  status: 'error'
+  error: {
+    message: string
+    code?: string
+    fields?: Record<string, string[]>
+  }
+}
+
+async function makeApiRequest<T>(
+  url: string,
+  options: RequestInit = {},
+): Promise<T> {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.API_KEY,
+        ...options.headers,
+      },
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiError
+      throw new Error(error.error.message)
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error('API request failed:', error)
+    throw error
+  }
+}
+
+// Example usage
+try {
+  const order = await makeApiRequest('http://localhost:3000/api/orders/123')
+  console.log('Order:', order)
+} catch (error) {
+  console.error('Failed to fetch order:', error)
+}
+```
+
+```python Python
+from typing import TypedDict, Optional, Dict, List, Any
+import requests
+
+class ApiError(TypedDict):
+    status: str
+    error: Dict[str, Any]
+
+def make_api_request(
+    url: str,
+    method: str = 'GET',
+    data: Optional[dict] = None
+) -> Any:
+    try:
+        response = requests.request(
+            method,
+            url,
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': os.getenv('API_KEY')
+            },
+            json=data
+        )
+
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        if e.response is not None:
+            error = e.response.json()
+            raise Exception(error['error']['message']) from e
+        raise
+
+# Example usage
+try:
+    order = make_api_request('http://localhost:3000/api/orders/123')
+    print('Order:', order)
+except Exception as error:
+    print('Failed to fetch order:', error)
+```
+
+</CodeGroup>
+
+### Retry Logic
+
+Implement exponential backoff for retrying failed requests:
+
+<CodeGroup>
+
+```typescript TypeScript
+async function makeApiRequestWithRetry<T>(
+  url: string,
+  options: RequestInit = {},
+  maxRetries = 3,
+): Promise<T> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await makeApiRequest<T>(url, options)
+    } catch (error) {
+      lastError = error as Error
+
+      // Don't retry certain errors
+      if (error instanceof Response) {
+        if ([401, 403, 404].includes(error.status)) {
+          throw error
+        }
+      }
+
+      if (attempt === maxRetries) break
+
+      // Exponential backoff
+      const delay = Math.pow(2, attempt) * 1000
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+
+  throw new Error(`Failed after ${maxRetries} attempts: ${lastError?.message}`)
+}
+
+// Example usage
+try {
+  const order = await makeApiRequestWithRetry(
+    'http://localhost:3000/api/orders/123',
+  )
+  console.log('Order:', order)
+} catch (error) {
+  console.error('Failed to fetch order:', error)
+}
+```
+
+```python Python
+import time
+from typing import Any, Optional
+
+def make_api_request_with_retry(
+    url: str,
+    method: str = 'GET',
+    data: Optional[dict] = None,
+    max_retries: int = 3
+) -> Any:
+    last_error = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            return make_api_request(url, method, data)
+        except requests.exceptions.RequestException as error:
+            last_error = error
+
+            # Don't retry certain errors
+            if error.response is not None:
+                if error.response.status_code in [401, 403, 404]:
+                    raise
+
+            if attempt == max_retries:
+                break
+
+            # Exponential backoff
+            delay = 2 ** attempt
+            time.sleep(delay)
+
+    raise Exception(
+        f"Failed after {max_retries} attempts: {str(last_error)}"
+    )
+
+# Example usage
+try:
+    order = make_api_request_with_retry(
+        'http://localhost:3000/api/orders/123'
+    )
+    print('Order:', order)
+except Exception as error:
+    print('Failed to fetch order:', error)
+```
+
+</CodeGroup>
+
+### Rate Limit Handling
+
+Handle rate limit errors with proper backoff:
+
+<CodeGroup>
+
+```typescript TypeScript
+async function makeApiRequestWithRateLimit<T>(
+  url: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.API_KEY,
+      ...options.headers,
+    },
+  })
+
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('retry-after')
+    const delayMs = retryAfter ? parseInt(retryAfter) * 1000 : 5000
+
+    console.warn(
+      `Rate limit exceeded. Retrying after ${delayMs / 1000} seconds`,
+    )
+
+    await new Promise(resolve => setTimeout(resolve, delayMs))
+    return makeApiRequestWithRateLimit<T>(url, options)
+  }
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error.message)
+  }
+
+  return response.json()
+}
+
+// Example usage
+try {
+  const orders = await makeApiRequestWithRateLimit(
+    'http://localhost:3000/api/orders',
+  )
+  console.log('Orders:', orders)
+} catch (error) {
+  console.error('Failed to fetch orders:', error)
+}
+```
+
+```python Python
+def make_api_request_with_rate_limit(
+    url: str,
+    method: str = 'GET',
+    data: Optional[dict] = None
+) -> Any:
+    try:
+        response = requests.request(
+            method,
+            url,
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': os.getenv('API_KEY')
+            },
+            json=data
+        )
+
+        if response.status_code == 429:
+            retry_after = response.headers.get('retry-after')
+            delay = int(retry_after) if retry_after else 5
+
+            print(f"Rate limit exceeded. Retrying after {delay} seconds")
+
+            time.sleep(delay)
+            return make_api_request_with_rate_limit(url, method, data)
+
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        if e.response is not None:
+            error = e.response.json()
+            raise Exception(error['error']['message']) from e
+        raise
+
+# Example usage
+try:
+    orders = make_api_request_with_rate_limit(
+        'http://localhost:3000/api/orders'
+    )
+    print('Orders:', orders)
+except Exception as error:
+    print('Failed to fetch orders:', error)
+```
+
+</CodeGroup>
+
+### Field Validation Errors
+
+Handle validation errors for specific fields:
+
+<CodeGroup>
+
+```typescript TypeScript
+interface ValidationError {
+  status: 'error'
+  error: {
+    message: string
+    fields: Record<string, string[]>
+  }
+}
+
+function isValidationError(error: unknown): error is ValidationError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    error.status === 'error' &&
+    'error' in error &&
+    typeof error.error === 'object' &&
+    error.error !== null &&
+    'fields' in error.error
+  )
+}
+
+async function createOrder(orderData: OrderCreate) {
+  try {
+    const response = await fetch('http://localhost:3000/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.API_KEY,
+      },
+      body: JSON.stringify(orderData),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+
+      if (isValidationError(error)) {
+        console.error('Validation errors:', error.error.fields)
+        // Handle specific field errors
+        if (error.error.fields['from.amount']) {
+          console.error('Invalid amount:', error.error.fields['from.amount'])
+        }
+      }
+
+      throw new Error(error.error.message)
+    }
+
+    return response.json()
+  } catch (error) {
+    console.error('Failed to create order:', error)
+    throw error
+  }
+}
+```
+
+```python Python
+from typing import TypedDict, Dict, List
+
+class ValidationError(TypedDict):
+    status: str
+    error: Dict[str, Dict[str, List[str]]]
+
+def is_validation_error(error: Any) -> bool:
+    return (
+        isinstance(error, dict) and
+        error.get('status') == 'error' and
+        isinstance(error.get('error'), dict) and
+        'fields' in error['error']
+    )
+
+def create_order(order_data: dict):
+    try:
+        response = requests.post(
+            'http://localhost:3000/api/orders',
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': os.getenv('API_KEY')
+            },
+            json=order_data
+        )
+
+        if not response.ok:
+            error = response.json()
+
+            if is_validation_error(error):
+                print('Validation errors:', error['error']['fields'])
+                # Handle specific field errors
+                if 'from.amount' in error['error']['fields']:
+                    print(
+                        'Invalid amount:',
+                        error['error']['fields']['from.amount']
+                    )
+
+            raise Exception(error['error']['message'])
+
+        return response.json()
+    except Exception as error:
+        print('Failed to create order:', error)
+        raise
+```
+
+</CodeGroup>
+
+## Error Logging
+
+Implement comprehensive error logging:
+
+<CodeGroup>
+
+```typescript TypeScript
+interface ErrorLog {
+  timestamp: string
+  error: string
+  context: {
+    url: string
+    method: string
+    statusCode?: number
+    requestId?: string
+    userId?: string
+  }
+  stack?: string
+}
+
+async function logError(error: Error, context: Record<string, any>) {
+  const errorLog: ErrorLog = {
+    timestamp: new Date().toISOString(),
+    error: error.message,
+    context: {
+      url: context.url,
+      method: context.method,
+      statusCode: context.statusCode,
+      requestId: context.requestId,
+      userId: context.userId,
+    },
+    stack: error.stack,
+  }
+
+  // Log to your error tracking system
+  console.error('API Error:', errorLog)
+
+  // Optional: Send to monitoring service
+  if (context.statusCode >= 500) {
+    await notifyTeam(errorLog)
+  }
+}
+
+async function notifyTeam(errorLog: ErrorLog) {
+  // Implement your notification system
+  console.error('Critical error:', errorLog)
+}
+```
+
+```python Python
+from datetime import datetime
+from typing import Optional, Dict, Any
+
+class ErrorLog(TypedDict):
+    timestamp: str
+    error: str
+    context: Dict[str, Any]
+    stack: Optional[str]
+
+def log_error(error: Exception, context: Dict[str, Any]):
+    error_log: ErrorLog = {
+        'timestamp': datetime.now().isoformat(),
+        'error': str(error),
+        'context': {
+            'url': context.get('url'),
+            'method': context.get('method'),
+            'status_code': context.get('status_code'),
+            'request_id': context.get('request_id'),
+            'user_id': context.get('user_id')
+        },
+        'stack': getattr(error, '__traceback__', None)
+    }
+
+    # Log to your error tracking system
+    print('API Error:', error_log)
+
+    # Optional: Send to monitoring service
+    if context.get('status_code', 0) >= 500:
+        notify_team(error_log)
+
+def notify_team(error_log: ErrorLog):
+    # Implement your notification system
+    print('Critical error:', error_log)
+```
+
+</CodeGroup>
+
+## Best Practices
+
+1. **Always Use Try-Catch**
+
+   - Wrap API calls in try-catch blocks
+   - Handle specific error types
+   - Provide meaningful error messages
+
+2. **Implement Retries**
+
+   - Use exponential backoff
+   - Set maximum retry attempts
+   - Skip retries for certain errors
+
+3. **Validate Input**
+
+   - Check data before sending
+   - Handle validation errors gracefully
+   - Provide clear error messages
+
+4. **Log Errors**
+   - Include relevant context
+   - Don't log sensitive data
+   - Use proper log levels
+
+## Rate Limits
+
+- 1000 requests per hour for most endpoints
+- Retries don't count against limits if proper backoff is used
+- Contact support for increased limits
+
+<Note>
+  Use exponential backoff when retrying requests to avoid overwhelming the API.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Monitoring Guide" icon="chart-line" href="/guides/monitoring">
+    Learn how to monitor your integration.
+  </Card>
+  <Card title="Security Guide" icon="shield-check" href="/guides/security">
+    Understand our security best practices.
+  </Card>
+</CardGroup>
+
+<Card title="Need help?" icon="question" href="/support">
+  Our support team is available 24/7 to assist with error handling and debugging
+</Card>
