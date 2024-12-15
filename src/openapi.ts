@@ -269,12 +269,12 @@ export function openapiSpec(app: Hono) {
         },
         servers: [
           {
-            url: 'https://orders.sdigital2.com',
-            description: 'Production server',
+            url: 'https://orders-sdigital2-sandbox.fly.dev',
+            description: 'Sandbox server',
           },
           {
-            url: 'https://orders.staging.sdigital2.com',
-            description: 'Staging server',
+            url: 'https://orders-sdigital2.fly.dev',
+            description: 'Production server',
           },
           {
             url: 'http://localhost:3000',
