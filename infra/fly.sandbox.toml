@@ -1,0 +1,19 @@
+app = "orders-sdigital2-sandbox"
+primary_region = "gig"
+
+[build]
+dockerfile = "api.Dockerfile"
+
+[env]
+PORT = "3000"
+NODE_ENV = "production"
+
+[http_service]
+internal_port = 3000
+min_machines_running = 0
+processes = ["app"]
+
+[[vm]]
+memory = "1gb"
+cpu_kind = "shared"
+cpus = 1

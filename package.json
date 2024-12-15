@@ -9,10 +9,13 @@
     "db:pull": "drizzle-kit pull",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "schema:generate": "./scripts/generate-schema.sh",
+    "deploy": "pnpm run deploy:sandbox && pnpm run deploy:production",
+    "deploy:production": "fly deploy --config infra/fly.production.toml",
+    "deploy:sandbox": "fly deploy --config infra/fly.sandbox.toml",
     "dev": "concurrently -n \"server,docs,openapi\" -c \"blue.bold,green.bold,yellow.bold\" \"ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/index.ts\" \"(cd docs && mintlify dev --port 3333)\" \"pnpm run docs:openapi:generate\"",
     "docs:openapi:generate": "./scripts/generate-openapi.sh",
     "docs:start": "mintlify dev",
+    "schema:generate": "./scripts/generate-schema.sh",
     "start": "node dist/index.js"
   },
   "dependencies": {
