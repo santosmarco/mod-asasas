@@ -274,6 +274,10 @@ export const Order = z
       example: 'Processed through priority channel.',
     }),
     payment_identifiers: OrderPaymentIdentifiers.optional(),
+    order_source: z.string().openapi({
+      description: 'Source of the order.',
+      example: 'api',
+    }),
     created_at: CreatedAt,
     updated_at: UpdatedAt,
   })
@@ -323,6 +327,7 @@ export const Order = z
         imad: 'MMQFMP8C001002921',
         omad: 'O0C20JR81C000693',
       },
+      order_source: 'api',
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
     },

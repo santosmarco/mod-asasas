@@ -70,6 +70,7 @@ export async function mapOrderData(order: InferSelectModel<typeof orderData>) {
     transaction_hash: order.txnHash ?? undefined,
     notes: order.notes ?? undefined,
     payment_identifiers: paymentIdentifiers,
+    order_source: 'api',
     created_at: order.dateOfRequest ?? '',
     updated_at: order.dateOfRequest ?? '',
   } satisfies Order
