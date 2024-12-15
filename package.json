@@ -30,6 +30,7 @@
     "zod-openapi": "^3.3.0"
   },
   "devDependencies": {
+    "@flydotio/dockerfile": "^0.5.9",
     "@scalar/api-reference-react": "^0.3.152",
     "@types/lodash": "^4.17.13",
     "@types/node": "22.10.0",
