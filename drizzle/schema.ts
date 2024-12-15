@@ -6,6 +6,7 @@ export const categoryEnumAd2Fad7F = pgEnum("category_enum_ad2fad7f", ['On-ramp',
 export const currencyEnum95958A2E = pgEnum("currency_enum_95958a2e", ['USD', 'MXN', 'BRL', 'USDC (ETH)', 'USDT (TRX)', 'USDT (ETH)'])
 export const internalResponsiblePersonEnumB31B90Bc = pgEnum("internal_responsible_person_enum_b31b90bc", ['Victor', 'Angel', 'Arnold', 'Daniel S'])
 export const operationTypeEnum741Ea889 = pgEnum("operation_type_enum_741ea889", ['on_ramp', 'off_ramp'])
+export const orderSourceEnum7Cab8Efb = pgEnum("order_source_enum_7cab8efb", ['ui', 'api'])
 export const ownerEnumA6707072 = pgEnum("owner_enum_a6707072", ['user', 'bridge', 'conduit'])
 export const paymentTypeEnum7Cc3Da13 = pgEnum("payment_type_enum_7cc3da13", ['Third-Party Payment', 'On-Ramp', 'Off-Ramp'])
 export const receivingCurrencyTypeEnum9F498E43 = pgEnum("receiving_currency_type_enum_9f498e43", ['stable', 'fiat'])
@@ -28,6 +29,7 @@ export const typeEnum3Da41284 = pgEnum("type_enum_3da41284", ['fiat', 'crypto'])
 export const typeEnumAdbf729B = pgEnum("type_enum_adbf729b", ['fiat', 'crypto'])
 
 export const currencyPairsCopyIdSeq1 = pgSequence("currency_pairs_copy_id_seq1", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
+export const entitiesEntityIdSeq1 = pgSequence("entities_entity_id_seq1", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 
 export const customerAccounts = pgTable("Customer_Accounts", {
 	id: serial().primaryKey().notNull(),
@@ -269,6 +271,7 @@ export const orderData = pgTable("Order_Data", {
 	userIdExt: integer("user_id_ext"),
 	platformFee: doublePrecision("platform_fee").default(sql`'0'`),
 	developerFee: doublePrecision("developer_fee").default(sql`'0'`),
+	orderSource: orderSourceEnum7Cab8Efb("order_source"),
 }, (table) => {
 	return {
 		orderDataReceivingAccountFkey: foreignKey({
@@ -440,6 +443,11 @@ export const users = pgTable("users", {
 	}
 });
 
+export const entities = pgTable("entities", {
+	name: text().notNull(),
+	entityId: integer("entity_id").primaryKey().generatedByDefaultAsIdentity({ name: "entities_entity_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
+});
+
 export const volumeOnetimePayments = pgTable("volume_onetime_payments", {
 	day: date().primaryKey().notNull(),
 	arbitrum: doublePrecision(),
@@ -490,9 +498,17 @@ export const conduitTransactions = pgTable("conduit_transactions", {
 	supportingDocs: text("supporting_docs"),
 	reference: text(),
 	transactionHash: text("transaction_hash"),
-	amountSettled: text("amount_settled"),
 	revenue: text(),
 	source: sourceEnum53B14601(),
+	entity: integer(),
+}, (table) => {
+	return {
+		conduitTransactionsEntityFkey: foreignKey({
+			columns: [table.entity],
+			foreignColumns: [entities.entityId],
+			name: "conduit_transactions_entity_fkey"
+		}),
+	}
 });
 
 export const currencyPairs2 = pgTable("currency_pairs_2", {

@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { countries, customerAccounts, users, cryptoNetworks, cryptoTokens, orderData, fiatCurrencies, currencies, currencyTradingPairs, wallets, organizations, currencyPairs2 } from "./schema";
+import { countries, customerAccounts, users, cryptoNetworks, cryptoTokens, orderData, fiatCurrencies, currencies, currencyTradingPairs, wallets, organizations, entities, conduitTransactions, currencyPairs2 } from "./schema";
 
 export const customerAccountsRelations = relations(customerAccounts, ({one, many}) => ({
 	country_businessCountry: one(countries, {
@@ -147,6 +147,17 @@ export const walletsRelations = relations(wallets, ({one}) => ({
 
 export const organizationsRelations = relations(organizations, ({many}) => ({
 	users: many(users),
+}));
+
+export const conduitTransactionsRelations = relations(conduitTransactions, ({one}) => ({
+	entity: one(entities, {
+		fields: [conduitTransactions.entity],
+		references: [entities.entityId]
+	}),
+}));
+
+export const entitiesRelations = relations(entities, ({many}) => ({
+	conduitTransactions: many(conduitTransactions),
 }));
 
 export const currencyPairs2Relations = relations(currencyPairs2, ({one}) => ({

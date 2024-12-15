@@ -11,6 +11,8 @@ import {
   currencyTradingPairs,
   wallets,
   organizations,
+  entities,
+  conduitTransactions,
   currencyPairs2,
 } from './schema'
 
@@ -179,6 +181,20 @@ export const walletsRelations = relations(wallets, ({ one }) => ({
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   users: many(users),
+}))
+
+export const conduitTransactionsRelations = relations(
+  conduitTransactions,
+  ({ one }) => ({
+    entity: one(entities, {
+      fields: [conduitTransactions.entity],
+      references: [entities.entityId],
+    }),
+  })
+)
+
+export const entitiesRelations = relations(entities, ({ many }) => ({
+  conduitTransactions: many(conduitTransactions),
 }))
 
 export const currencyPairs2Relations = relations(currencyPairs2, ({ one }) => ({
