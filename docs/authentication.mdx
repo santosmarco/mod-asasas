@@ -5,7 +5,7 @@ description: 'Learn how to authenticate your API requests'
 
 # Authentication
 
-The SD2 Mod API uses API key authentication to secure all endpoints. This guide explains how to obtain, use, and manage your API keys securely.
+The SD2 Mod API uses API key authentication to secure endpoints. This guide explains how to obtain, use, and manage your API keys securely.
 
 ## Getting Your API Key
 
@@ -182,10 +182,7 @@ Implement robust error handling for authentication failures:
 
 ```typescript TypeScript
 class AuthError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number,
-  ) {
+  constructor(message: string, public statusCode: number) {
     super(message)
     this.name = 'AuthError'
   }
@@ -193,7 +190,7 @@ class AuthError extends Error {
 
 async function makeAuthenticatedRequest(
   url: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ) {
   try {
     const response = await fetch(url, {

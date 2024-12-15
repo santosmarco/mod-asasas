@@ -205,8 +205,8 @@ print(f"Created fiat recipient: {recipient['id']}")
 Once you have recipients set up, you can create orders.
 
 <Card horizontal title="Orders Guide" icon="file-invoice" href="/guides/orders">
-  Explore our comprehensive Orders Guide for detailed information about creating
-  and managing orders.
+  Explore our Orders Guide for detailed information about creating and managing
+  orders.
 </Card>
 
 ### Fiat to Crypto Order
@@ -349,7 +349,7 @@ const response = await fetch(
     method: 'PUT',
     headers,
     body: JSON.stringify(confirmation),
-  },
+  }
 )
 
 const { data: confirmedOrder } = await response.json()
@@ -382,7 +382,7 @@ print(f"Order confirmed: {confirmed_order['status']}")
   icon="chart-line"
   href="/guides/monitoring"
 >
-  Discover comprehensive monitoring tools and best practices.
+  Discover monitoring tools and best practices.
 </Card>
 
 ### Getting Order Details
@@ -469,7 +469,7 @@ const response = await fetch(
   {
     method: 'PUT',
     headers,
-  },
+  }
 )
 
 const { data: identifiers } = await response.json()
@@ -510,7 +510,7 @@ if identifiers.get('notes'):
   icon="shield-check"
   href="/guides/validation"
 >
-  Understand our comprehensive validation rules and best practices.
+  Understand our validation rules and best practices.
 </Card>
 
 1. **Currency Pairs**
@@ -663,7 +663,7 @@ def create_order_with_retry(order_data: dict, max_retries: int = 3) -> Order:
   icon="chart-line"
   href="/guides/monitoring"
 >
-  Set up comprehensive monitoring for your integration.
+  Set up monitoring for your integration.
 </Card>
 
 <Card title="Need help?" icon="question" href="/support">

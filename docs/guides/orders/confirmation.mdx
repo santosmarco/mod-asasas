@@ -48,7 +48,7 @@ async function confirmOrder(orderId: string, data: OrderConfirm) {
         'x-api-key': process.env.API_KEY,
       },
       body: JSON.stringify(data),
-    },
+    }
   )
 
   if (!response.ok) {
@@ -119,7 +119,7 @@ async function requestPaymentIdentifiers(orderId: string) {
         'Content-Type': 'application/json',
         'x-api-key': process.env.API_KEY,
       },
-    },
+    }
   )
 
   if (!response.ok) {
@@ -254,7 +254,7 @@ elif order['status'] == 'raised':
 async function confirmOrderWithRetry(
   orderId: string,
   data: OrderConfirm,
-  maxRetries = 3,
+  maxRetries = 3
 ): Promise<Order> {
   let lastError: Error | null = null
 
@@ -269,7 +269,7 @@ async function confirmOrderWithRetry(
             'x-api-key': process.env.API_KEY,
           },
           body: JSON.stringify(data),
-        },
+        }
       )
 
       if (!response.ok) {
@@ -285,13 +285,13 @@ async function confirmOrderWithRetry(
 
       // Exponential backoff
       await new Promise(resolve =>
-        setTimeout(resolve, Math.pow(2, attempt) * 1000),
+        setTimeout(resolve, Math.pow(2, attempt) * 1000)
       )
     }
   }
 
   throw new Error(
-    `Failed to confirm order after ${maxRetries} attempts: ${lastError?.message}`,
+    `Failed to confirm order after ${maxRetries} attempts: ${lastError?.message}`
   )
 }
 ```
@@ -348,7 +348,7 @@ async function pollOrderStatus(
   orderId: string,
   targetStatus: string,
   maxAttempts = 10,
-  interval = 5000,
+  interval = 5000
 ): Promise<Order> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const { data: order } = await getOrderStatus(orderId)
@@ -447,7 +447,7 @@ except Exception as error:
     Learn more about IMAD/OMAD identifiers.
   </Card>
   <Card title="Order Monitoring" icon="chart-line" href="/guides/monitoring">
-    Set up comprehensive order monitoring.
+    Set up order monitoring.
   </Card>
 </CardGroup>
 

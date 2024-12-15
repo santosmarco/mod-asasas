@@ -212,7 +212,7 @@ export function openapiSpec(app: Hono) {
             | Feature | Availability |
             | ------- | ------------ |
             | **Fiat & Crypto Support**<br>Process payments in multiple fiat currencies (USD, BRL, MXN) and cryptocurrencies (USDC, USDT) across different networks | ✓ |
-            | **Recipient Management**<br>Create and manage recipients for both fiat and crypto payments with comprehensive validation and security checks | ✓ |
+            | **Recipient Management**<br>Create and manage recipients for both fiat and crypto payments with validation and security checks | ✓ |
             | **Order Processing**<br>Create, confirm, and track payment orders with real-time status updates and detailed transaction history | ✓ |
             | **Payment Identifiers**<br>Track wire transfers with IMAD/OMAD identifiers for complete payment visibility | ✓ |
 

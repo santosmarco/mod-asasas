@@ -210,7 +210,7 @@ const response = await fetch(
     method: 'PUT',
     headers,
     body: JSON.stringify(confirmation),
-  },
+  }
 )
 
 const { data: confirmedOrder } = await response.json()
@@ -294,7 +294,7 @@ const response = await fetch(
   {
     method: 'PUT',
     headers,
-  },
+  }
 )
 
 const { data: identifiers } = await response.json()
@@ -386,5 +386,5 @@ except requests.exceptions.RequestException as error:
 </CardGroup>
 
 <Card title="Need help?" icon="question" href="/support">
-  Our support team is available 24/7 to assist with your integration
+  Our support team is available 24/7 to assist with your integration.
 </Card>
