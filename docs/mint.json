@@ -68,7 +68,6 @@
     {
       "group": "Schemas",
       "pages": [
-        "/api-reference/schemas/user",
         "/api-reference/schemas/order",
         {
           "group": "Recipient",
